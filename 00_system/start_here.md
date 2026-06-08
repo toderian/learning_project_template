@@ -8,7 +8,7 @@ tags: [system]
 
 # Start Here
 
-This vault is a Markdown-first learning project template. Use it for capture, journaling, projects, areas, resources, knowledge notes, recall practice, outputs, and safe agent-assisted workflows.
+This vault is a Markdown-first learning project. Use it for capture, journaling, projects, areas, resources, knowledge notes, recall practice, outputs, and safe agent-assisted workflows.
 
 ## First Five Minutes
 
@@ -34,10 +34,6 @@ This vault is a Markdown-first learning project template. Use it for capture, jo
 - Wiki notes collect stable reference material that benefits from a more encyclopedia-like page.
 - MOCs map related notes and resources so a topic can be navigated quickly.
 - Synthesis notes combine multiple sources or notes into a higher-level argument, model, or explanation.
-
-## Upstream Updates
-
-For project repos that keep this base repo as `upstream`, follow [upstream_updates.md](upstream_updates.md). Downstream projects should not need to edit template-owned root docs, CI, scripts, policies, or Obsidian defaults just to use the vault.
 
 ## Optional Layers
 

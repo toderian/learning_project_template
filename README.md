@@ -1,6 +1,6 @@
-# Learning Project Template
+# learning_project_vi
 
-A generic Markdown-first vault template for learning projects, journals, knowledge notes, memory practice, outputs, and safe agent-assisted workflows.
+A Markdown-first learning vault for projects, journals, knowledge notes, memory practice, outputs, and safe agent-assisted workflows.
 
 The vault works in any Markdown editor. Obsidian is optional and should be treated as an editing and graph layer, not as the source of truth.
 
@@ -20,29 +20,9 @@ python3 -m pip install -r requirements.txt
 
 Set `SKIP_MARKDOWNLINT=1` only when you intentionally need to run the core validator without Markdown lint.
 
-## Shared Upstream Model
+## Shape
 
-This repository is designed to stay as a zero-personalization base repo. Downstream project repos should keep template-owned files unchanged unless they are intentionally contributing template improvements.
-
-Recommended setup:
-
-```bash
-git clone <template-repo-url> my-learning-project
-cd my-learning-project
-git remote rename origin upstream
-git remote add origin <project-repo-url>
-git push -u origin master
-```
-
-Pull future base updates with:
-
-```bash
-git fetch upstream
-git merge upstream/master
-12_tools/scripts/validate.sh
-```
-
-See [00_system/upstream_updates.md](00_system/upstream_updates.md) for conflict handling and base-owned versus project-owned paths.
+This repo is a personal exemplar. Edit the root docs, policies, templates, examples, and folder conventions directly when the vault needs to fit real use better.
 
 ## Structure
 
@@ -71,4 +51,4 @@ See [00_system/upstream_updates.md](00_system/upstream_updates.md) for conflict 
 
 ## License
 
-MIT, owned by `Learning Project Template contributors`. See [LICENSE](LICENSE).
+MIT, owned by `learning_project_vi contributors`. See [LICENSE](LICENSE).
