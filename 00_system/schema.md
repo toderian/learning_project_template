@@ -66,9 +66,9 @@ Allowed `confidence` values are `low`, `medium`, and `high`. Confidence means re
 | `course` | extended | `05_resources/courses/` | `course.md` | yes |
 | `book` | extended | `05_resources/books/` | `book.md` | no |
 | `paper` | extended | `05_resources/papers/` | `paper.md` | yes |
-| `documentation` | extended | `05_resources/documentation/` | `resource.md` | no |
-| `video` | extended | `05_resources/videos/` | `resource.md` | no |
-| `fleeting` | extended | `06_knowledge/fleeting/` | `inbox_note.md` | no |
+| `documentation` | extended | `05_resources/documentation/` | `documentation.md` | no |
+| `video` | extended | `05_resources/videos/` | `video.md` | no |
+| `fleeting` | extended | `06_knowledge/fleeting/` | `fleeting_note.md` | no |
 | `literature` | extended | `06_knowledge/literature/` | `literature_note.md` | no |
 | `atomic` | core | `06_knowledge/atomic/` | `atomic_note.md` | yes |
 | `wiki` | extended | `06_knowledge/wiki/` | `wiki_page.md` | no |
@@ -77,7 +77,7 @@ Allowed `confidence` values are `low`, `medium`, and `high`. Confidence means re
 | `flashcard` | core | `07_memory/spaced_repetition/` | `flashcard_deck.md` | yes |
 | `retrieval_practice` | core | `07_memory/retrieval_practice/` | `retrieval_practice.md` | no |
 | `review_log` | extended | `07_memory/review_logs/` | `review_log.md` | no |
-| `output` | core | `08_outputs/` | `summary.md` | no |
+| `output` | core | `08_outputs/` | `output.md` | no |
 | `summary` | extended | `08_outputs/summaries/` | `summary.md` | yes |
 | `report` | extended | `08_outputs/reports/` | `report.md` | no |
 | `essay` | extended | `08_outputs/essays/` | `essay.md` | no |

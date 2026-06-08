@@ -6,6 +6,7 @@ import json
 import re
 import subprocess
 import sys
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -17,6 +18,28 @@ except ImportError:  # pragma: no cover - fallback for minimal Python installs.
 ROOT = Path.cwd()
 ERRORS: list[str] = []
 WARNINGS: list[str] = []
+SCAN_FILES_CACHE: list[Path] | None = None
+SCAN_PATHS_CACHE: list[Path] | None = None
+
+SCALAR_FRONTMATTER_FIELDS = {
+    "type",
+    "status",
+    "created",
+    "updated",
+    "review_after",
+    "confidence",
+    "source",
+    "url",
+    "author",
+}
+
+
+@dataclass(frozen=True)
+class SchemaRow:
+    note_type: str
+    default_folder: str
+    default_template: str
+    example_required: bool
 
 
 def rel(path: Path) -> str:
@@ -31,18 +54,70 @@ def warn(message: str) -> None:
     WARNINGS.append(message)
 
 
+def git_ls_files(*args: str) -> set[str] | None:
+    result = subprocess.run(
+        ["git", "ls-files", "-z", *args],
+        cwd=ROOT,
+        check=False,
+        text=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    if result.returncode != 0:
+        return None
+    return {
+        item.decode("utf-8")
+        for item in result.stdout.split(b"\0")
+        if item
+    }
+
+
+def scan_files() -> list[Path]:
+    global SCAN_FILES_CACHE
+    if SCAN_FILES_CACHE is not None:
+        return SCAN_FILES_CACHE
+
+    tracked = git_ls_files("--cached")
+    unignored = git_ls_files("--others", "--exclude-standard")
+    if tracked is None or unignored is None:
+        files = [
+            path
+            for path in ROOT.rglob("*")
+            if ".git" not in path.relative_to(ROOT).parts and path.is_file()
+        ]
+    else:
+        files = [
+            ROOT / relative
+            for relative in sorted(tracked | unignored)
+            if (ROOT / relative).is_file()
+        ]
+
+    SCAN_FILES_CACHE = sorted(files, key=rel)
+    return SCAN_FILES_CACHE
+
+
 def all_paths() -> list[Path]:
-    paths: list[Path] = []
-    for path in ROOT.rglob("*"):
-        parts = path.relative_to(ROOT).parts
-        if ".git" in parts:
-            continue
-        paths.append(path)
-    return sorted(paths, key=rel)
+    global SCAN_PATHS_CACHE
+    if SCAN_PATHS_CACHE is not None:
+        return SCAN_PATHS_CACHE
+
+    paths: set[Path] = set(scan_files())
+    for file_path in scan_files():
+        parent = file_path.parent
+        while parent != ROOT:
+            try:
+                parent.relative_to(ROOT)
+            except ValueError:
+                break
+            paths.add(parent)
+            parent = parent.parent
+
+    SCAN_PATHS_CACHE = sorted(paths, key=rel)
+    return SCAN_PATHS_CACHE
 
 
 def all_files() -> list[Path]:
-    return [path for path in all_paths() if path.is_file()]
+    return scan_files()
 
 
 def read_text(path: Path) -> str:
@@ -63,23 +138,29 @@ def is_iso_date(value: str) -> bool:
     return True
 
 
-def yaml_value_to_string(value: object) -> str:
+def yaml_value_to_string(key: str, value: object, path: Path) -> str:
     if value is None:
+        return ""
+    if key in SCALAR_FRONTMATTER_FIELDS and isinstance(value, (list, dict)):
+        error(f"{rel(path)}: scalar frontmatter field '{key}' must not be a YAML list or mapping")
         return ""
     if hasattr(value, "isoformat"):
         return str(value.isoformat())
     if isinstance(value, (list, dict)):
-        return ""
+        return str(value)
     return str(value).strip()
 
 
 def validate_yaml_subset(frontmatter_text: str, path: Path) -> dict[str, str] | None:
     data: dict[str, str] = {}
+    current_key = ""
     for line_number, line in enumerate(frontmatter_text.splitlines(), start=2):
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
         if stripped.startswith("- "):
+            if current_key in SCALAR_FRONTMATTER_FIELDS:
+                error(f"{rel(path)}:{line_number}: scalar frontmatter field '{current_key}' must not be a YAML list")
             continue
         if ":" not in line:
             error(f"{rel(path)}:{line_number}: invalid frontmatter line")
@@ -87,6 +168,7 @@ def validate_yaml_subset(frontmatter_text: str, path: Path) -> dict[str, str] | 
         key, value = line.split(":", 1)
         key = key.strip()
         value = value.strip()
+        current_key = key
         if not key:
             error(f"{rel(path)}:{line_number}: empty frontmatter key")
             return None
@@ -101,6 +183,8 @@ def validate_yaml_subset(frontmatter_text: str, path: Path) -> dict[str, str] | 
         if value.startswith("{") and not value.endswith("}"):
             error(f"{rel(path)}:{line_number}: invalid YAML flow mapping")
             return None
+        if key in SCALAR_FRONTMATTER_FIELDS and (value.startswith("[") or value.startswith("{")):
+            error(f"{rel(path)}:{line_number}: scalar frontmatter field '{key}' must not be a YAML list or mapping")
         data[key] = value
     return data
 
@@ -150,7 +234,7 @@ def parse_frontmatter(text: str, path: Path) -> tuple[dict[str, str], str] | Non
         if not isinstance(loaded, dict):
             error(f"{rel(path)}: frontmatter must be a YAML mapping")
             loaded = {}
-        data = {str(key): yaml_value_to_string(value) for key, value in loaded.items()}
+        data = {str(key): yaml_value_to_string(str(key), value, path) for key, value in loaded.items()}
     else:
         parsed = validate_yaml_subset(frontmatter_text, path)
         if parsed is not None:
@@ -176,15 +260,22 @@ def text_without_fenced_blocks(text: str) -> str:
     return "\n".join(line for _line_number, line in iter_non_fenced_lines(text))
 
 
-def parse_schema() -> tuple[set[str], set[str], set[str]]:
+def parse_code_cell(cell: str, column: str, line: str) -> str:
+    if cell == "none":
+        return cell
+    if not (cell.startswith("`") and cell.endswith("`")):
+        error(f"00_system/schema.md: {column} cell must be backticked in row: {line}")
+        return cell.strip("`")
+    return cell.strip("`")
+
+
+def parse_schema() -> dict[str, SchemaRow]:
     schema_path = ROOT / "00_system/schema.md"
     if not schema_path.exists():
         error("00_system/schema.md is missing")
-        return set(), set(), set()
+        return {}
 
-    allowed_types: set[str] = set()
-    templates: set[str] = set()
-    examples_required: set[str] = set()
+    rows: dict[str, SchemaRow] = {}
 
     for line in read_text(schema_path).splitlines():
         if not line.startswith("| `"):
@@ -193,19 +284,34 @@ def parse_schema() -> tuple[set[str], set[str], set[str]]:
         if len(cells) != 5:
             error(f"00_system/schema.md: malformed schema table row: {line}")
             continue
-        note_type = cells[0].strip("`")
-        default_template = cells[3].strip("`")
+        note_type = parse_code_cell(cells[0], "Type", line)
+        default_folder = parse_code_cell(cells[2], "Default Folder", line)
+        default_template = parse_code_cell(cells[3], "Default Template", line)
         example_required = cells[4].lower()
-        allowed_types.add(note_type)
-        if default_template != "none":
-            templates.add(default_template)
-        if example_required == "yes":
-            examples_required.add(note_type)
 
-    if not allowed_types:
+        if note_type in rows:
+            error(f"00_system/schema.md: duplicate schema type '{note_type}'")
+        if example_required not in {"yes", "no"}:
+            error(f"00_system/schema.md: Example Required must be yes or no for type '{note_type}'")
+
+        target = ROOT / default_folder
+        if default_folder.endswith(".md"):
+            if not target.is_file():
+                error(f"00_system/schema.md: default file '{default_folder}' for type '{note_type}' is missing")
+        elif not target.is_dir():
+            error(f"00_system/schema.md: default folder '{default_folder}' for type '{note_type}' is missing")
+
+        rows[note_type] = SchemaRow(
+            note_type=note_type,
+            default_folder=default_folder,
+            default_template=default_template,
+            example_required=example_required == "yes",
+        )
+
+    if not rows:
         error("00_system/schema.md: no note types parsed from schema table")
 
-    return allowed_types, templates, examples_required
+    return rows
 
 
 def note_schema_exempt(path: Path) -> bool:
@@ -219,6 +325,10 @@ def note_schema_exempt(path: Path) -> bool:
     if relative.startswith(".agents/skills/") or relative.startswith(".claude/skills/"):
         return True
     return False
+
+
+def default_folder_exempt(path: Path) -> bool:
+    return rel(path) == "10_agents/tests/prompt_injection_canary.md"
 
 
 def check_paths(paths: list[Path]) -> None:
@@ -356,15 +466,51 @@ def check_json_files() -> None:
             error(f"{rel(path)}:{exc.lineno}: invalid JSON: {exc.msg}")
 
 
-def check_markdown_schema(allowed_types: set[str], templates: set[str], examples_required: set[str]) -> None:
+def path_matches_default_folder(path: Path, default_folder: str) -> bool:
+    relative = rel(path)
+    if default_folder.endswith(".md"):
+        return relative == default_folder
+    return relative.startswith(default_folder)
+
+
+def check_markdown_schema(schema_rows: dict[str, SchemaRow]) -> None:
     statuses = {"inbox", "draft", "active", "review", "stable", "done", "archived"}
     confidence_values = {"low", "medium", "high"}
     note_types_seen: dict[str, list[str]] = {}
+    allowed_types = set(schema_rows)
+    templates = {
+        row.default_template
+        for row in schema_rows.values()
+        if row.default_template != "none"
+    }
+    examples_required = {
+        row.note_type
+        for row in schema_rows.values()
+        if row.example_required
+    }
 
     for template in sorted(templates):
         template_path = ROOT / "11_templates" / template
         if not template_path.exists():
             error(f"11_templates/{template}: template listed in schema table is missing")
+            continue
+
+    for row in schema_rows.values():
+        if row.default_template == "none":
+            continue
+        template_path = ROOT / "11_templates" / row.default_template
+        if not template_path.exists():
+            continue
+        parsed = parse_frontmatter(read_text(template_path), template_path)
+        if parsed is None:
+            error(f"{rel(template_path)}: template listed in schema table is missing YAML frontmatter")
+            continue
+        data, _body = parsed
+        if data.get("type", "") != row.note_type:
+            error(
+                f"{rel(template_path)}: template type '{data.get('type', '')}' "
+                f"does not match schema row type '{row.note_type}'"
+            )
 
     for path in all_files():
         if path.suffix != ".md":
@@ -393,6 +539,13 @@ def check_markdown_schema(allowed_types: set[str], templates: set[str], examples
             error(f"{rel(path)}: type '{note_type}' is not allowed")
         else:
             note_types_seen.setdefault(note_type, []).append(rel(path))
+            if not rel(path).startswith("11_templates/") and not default_folder_exempt(path):
+                row = schema_rows[note_type]
+                if not path_matches_default_folder(path, row.default_folder):
+                    error(
+                        f"{rel(path)}: type '{note_type}' belongs under "
+                        f"'{row.default_folder}'"
+                    )
         if status not in statuses:
             error(f"{rel(path)}: status '{status}' is not allowed")
         if confidence and confidence not in confidence_values:
@@ -422,13 +575,25 @@ def slugify_heading(heading: str) -> str:
     return heading
 
 
-def build_link_index() -> tuple[dict[str, Path], dict[str, list[Path]], dict[str, set[str]], dict[str, set[str]]]:
+def build_link_index() -> tuple[
+    dict[str, Path],
+    dict[str, list[Path]],
+    dict[str, set[str]],
+    dict[str, set[str]],
+    dict[str, Path],
+    dict[str, list[Path]],
+]:
     by_path: dict[str, Path] = {}
     by_name: dict[str, list[Path]] = {}
     headings: dict[str, set[str]] = {}
     blocks: dict[str, set[str]] = {}
+    files_by_path: dict[str, Path] = {}
+    files_by_name: dict[str, list[Path]] = {}
 
     for path in all_files():
+        files_by_path[rel(path)] = path
+        files_by_name.setdefault(path.name, []).append(path)
+
         if path.suffix != ".md":
             continue
         relative_no_suffix = rel(path.with_suffix(""))
@@ -448,7 +613,7 @@ def build_link_index() -> tuple[dict[str, Path], dict[str, list[Path]], dict[str
         headings[rel(path)] = path_headings
         blocks[rel(path)] = path_blocks
 
-    return by_path, by_name, headings, blocks
+    return by_path, by_name, headings, blocks, files_by_path, files_by_name
 
 
 def resolve_wikilink_target(target: str, source: Path, by_path: dict[str, Path], by_name: dict[str, list[Path]]) -> Path | None:
@@ -466,8 +631,25 @@ def resolve_wikilink_target(target: str, source: Path, by_path: dict[str, Path],
     return None
 
 
+def resolve_file_embed_target(
+    target: str,
+    source: Path,
+    files_by_path: dict[str, Path],
+    files_by_name: dict[str, list[Path]],
+) -> Path | None:
+    normalized = target.strip("/")
+    if normalized in files_by_path:
+        return files_by_path[normalized]
+    if "/" not in normalized and normalized in files_by_name:
+        matches = files_by_name[normalized]
+        if len(matches) == 1:
+            return matches[0]
+        error(f"{rel(source)}: file embed target '{target}' is ambiguous")
+    return None
+
+
 def check_wikilinks() -> None:
-    by_path, by_name, headings, blocks = build_link_index()
+    by_path, by_name, headings, blocks, files_by_path, files_by_name = build_link_index()
     pattern = re.compile(r"\[\[([^\]]+)\]\]")
 
     for path in all_files():
@@ -477,12 +659,15 @@ def check_wikilinks() -> None:
             continue
         text = text_without_fenced_blocks(read_text(path))
         for match in pattern.finditer(text):
+            is_embed = match.start() > 0 and text[match.start() - 1] == "!"
             raw_target = match.group(1).split("|", 1)[0].strip()
             note_part = raw_target
             fragment = ""
             if "#" in raw_target:
                 note_part, fragment = raw_target.split("#", 1)
             target_path = resolve_wikilink_target(note_part, path, by_path, by_name)
+            if target_path is None and is_embed:
+                target_path = resolve_file_embed_target(note_part, path, files_by_path, files_by_name)
             if target_path is None:
                 error(f"{rel(path)}: broken wikilink '{match.group(0)}'")
                 continue
@@ -643,13 +828,13 @@ def check_markdown_style_basics() -> None:
 
 
 paths = all_paths()
-allowed_types, templates, examples_required = parse_schema()
+schema_rows = parse_schema()
 
 check_paths(paths)
 check_gitignore()
 check_script_structure()
 check_json_files()
-check_markdown_schema(allowed_types, templates, examples_required)
+check_markdown_schema(schema_rows)
 check_wikilinks()
 check_memory_metadata()
 check_secrets_and_local_paths()

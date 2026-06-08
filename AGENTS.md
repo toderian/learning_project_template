@@ -39,6 +39,8 @@ These paths require explicit user approval before edits:
 - `.obsidian/`
 - `12_tools/scripts/`
 
+Exception: `10_agents/memory/candidates/` is an approved write scope for bounded staged memory candidates when memory-update work is requested. Other edits under `10_agents/` still require explicit approval.
+
 ## Moves And Renames
 
 Approved CLI or agent moves must update inbound wikilinks with `12_tools/scripts/rewrite_wikilinks.py` or an equivalent reviewed process. If link rewriting is unsafe, leave files in place and produce a proposal.

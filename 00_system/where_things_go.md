@@ -26,6 +26,15 @@ Use this routing guide when filing notes or assets.
 - Small vault-adjacent script: `12_tools/`
 - Inactive but worth keeping: `99_archive/`
 
+## Knowledge Routing
+
+- Use `06_knowledge/fleeting/` for rough thoughts that may be deleted, merged, or promoted later.
+- Use `06_knowledge/literature/` for notes tied closely to one source.
+- Use `06_knowledge/atomic/` for one durable idea written in your own words.
+- Use `06_knowledge/wiki/` for stable reference pages that collect factual context.
+- Use `06_knowledge/mocs/` for maps of related notes, resources, projects, and outputs.
+- Use `06_knowledge/synthesis/` for cross-source explanations, arguments, or models.
+
 ## If Unsure
 
 Put the item in `01_inbox/agent_inbox/` with a short reason. Triage it during the weekly review.

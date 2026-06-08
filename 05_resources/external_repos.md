@@ -11,6 +11,8 @@ review_after: 2026-07-08
 
 Use this registry for labs and standalone projects that should not live inside the vault.
 
+Downstream projects should append entries here. `11_templates/external_repo.md` is a copyable entry snippet for this registry, not a requirement to create a separate standalone note for every external repository.
+
 ```yaml
 name:
 url:

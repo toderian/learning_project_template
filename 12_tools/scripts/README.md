@@ -18,8 +18,9 @@ Keep validator logic in script files. Do not add large inline validators to shel
 Local requirements:
 
 - Python 3.12 in CI; Python 3.9 or newer should work for local use.
-- `PyYAML` is recommended for strict YAML frontmatter parsing. The validator has a limited fallback when it is not installed.
-- `markdownlint-cli2` may be installed globally. If it is not installed and `npx` is available, `validate.sh` runs it through `npx`.
+- Install Python dependencies with `python3 -m pip install -r requirements.txt`.
+- Install Node dependencies with `npm ci`.
+- `markdownlint-cli2` is required by default. Set `SKIP_MARKDOWNLINT=1` only for an intentional core-only validation run.
 
 ## Memory Review
 
@@ -28,6 +29,8 @@ Local requirements:
 ```
 
 Lists note-level `review_after` items and card-level `due::` items due on or before the selected date.
+
+Notes tagged `example` are skipped by default. Add `--include-examples` to include scaffold examples.
 
 ## Wikilink Rewrites
 

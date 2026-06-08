@@ -16,6 +16,7 @@ Treat the numbered top-level folders as public structure. Do not renumber them a
 - Add every non-`none` template listed in the schema table.
 - Keep examples generic, safe to publish, and link-complete.
 - Keep `_prompts/plans/` as reference material in this repo. End-user vaults may delete it after cloning.
+- Keep root docs, CI, scripts, policy files, templates, and Obsidian defaults zero-personalization so downstream repos can merge upstream changes cleanly.
 - Run `12_tools/scripts/validate.sh` before committing.
 - Keep validation logic in dedicated files under `12_tools/scripts/`; do not embed large inline validators in shell wrappers or CI workflow YAML.
 

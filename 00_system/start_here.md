@@ -26,6 +26,19 @@ This vault is a Markdown-first learning project template. Use it for capture, jo
 - Use `due::` for card-level memory practice.
 - Keep generated outputs, databases, caches, secrets, and local runtime state out of Git.
 
+## Knowledge Note Types
+
+- Fleeting notes are short, temporary captures of thoughts that are not ready to become reusable knowledge.
+- Literature notes summarize or quote an external source, with enough citation context to return to that source.
+- Atomic notes state one reusable idea in your own words.
+- Wiki notes collect stable reference material that benefits from a more encyclopedia-like page.
+- MOCs map related notes and resources so a topic can be navigated quickly.
+- Synthesis notes combine multiple sources or notes into a higher-level argument, model, or explanation.
+
+## Upstream Updates
+
+For project repos that keep this base repo as `upstream`, follow [upstream_updates.md](upstream_updates.md). Downstream projects should not need to edit template-owned root docs, CI, scripts, policies, or Obsidian defaults just to use the vault.
+
 ## Optional Layers
 
 Obsidian, community plugins, MCP tools, sidecar memory systems, and Git LFS are optional. The vault should remain useful with plain Markdown and Git only.
