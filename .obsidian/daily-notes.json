@@ -1,0 +1,5 @@
+{
+  "folder": "02_journal/daily",
+  "format": "YYYY-MM-DD",
+  "template": "11_templates/daily_note.md"
+}
