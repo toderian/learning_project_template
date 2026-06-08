@@ -17,6 +17,7 @@ Treat the numbered top-level folders as public structure. Do not renumber them a
 - Keep examples generic, safe to publish, and link-complete.
 - Keep `_prompts/plans/` as reference material in this repo. End-user vaults may delete it after cloning.
 - Run `12_tools/scripts/validate.sh` before committing.
+- Keep validation logic in dedicated files under `12_tools/scripts/`; do not embed large inline validators in shell wrappers or CI workflow YAML.
 
 ## Versioning
 
