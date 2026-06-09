@@ -1,5 +1,5 @@
 # Screenshots
 
 Temporary screenshots. Move useful curated images to
-`04_areas/<area>/assets/images/<topic-or-subtopic>/` with timestamp-prefixed
+`04_areas/<area>/assets/images/<topic-path>/` with timestamp-prefixed
 filenames.

@@ -45,11 +45,11 @@ name.
     study_plans/
   assets/
     attachments/
-      <topic-or-subtopic>/
+      <topic-path>/
     images/
-      <topic-or-subtopic>/
+      <topic-path>/
     imports/
-      <topic-or-subtopic>/
+      <topic-path>/
   archive/
 ```
 
@@ -61,6 +61,7 @@ area-local Markdown notes. Use `new_note.py inbox TITLE --area <area>` for
 known-topic captures that still need triage.
 
 Curated images, photos, screenshots, PDFs, and other attachments should be
-filed under `assets/<category>/<topic-or-subtopic>/` with timestamp-prefixed
-filenames. Use nested lowercase kebab-case topic folders when a subtopic needs
-its own grouping.
+filed with `12_tools/scripts/new_asset.py` under
+`assets/<category>/<topic-path>/` with timestamp-prefixed filenames. Use
+slash-separated lowercase kebab-case topic paths, for example
+`sql-injection/login-forms`.

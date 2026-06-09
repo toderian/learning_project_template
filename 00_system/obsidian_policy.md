@@ -23,7 +23,7 @@ Only these `.obsidian` files are part of the public template:
 
 Pasted attachments should land in `01_inbox/raw_files/` first. Move curated
 assets later into the relevant topic folder under
-`04_areas/<area>/assets/<images|attachments|imports>/<topic-or-subtopic>/`
+`04_areas/<area>/assets/<images|attachments|imports>/<topic-path>/`
 with a timestamp-prefixed filename.
 
 ## Ignored Runtime Config

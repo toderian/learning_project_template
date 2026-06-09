@@ -38,6 +38,34 @@ Both helpers accept:
 safe two- to four-word ASCII slug. Unsupported creation types include `area`,
 `asset`, `system`, journal and review types, and `tool`.
 
+File a curated asset:
+
+```bash
+12_tools/scripts/new_asset.py image ~/Desktop/nmap.png --area web-security --topic network-scanning --title "Nmap scan output"
+12_tools/scripts/new_asset.py pdf ./lab-notes.pdf --area web-security --topic sql-injection/login-forms --title "Login form lab notes" --copy
+12_tools/scripts/new_asset.py import ./chat-export.json --area web-security --topic ai-assisted-review --slug exported-chat
+```
+
+`new_asset.py` moves the source file by default into
+`04_areas/<area>/assets/<images|attachments|imports>/<topic-path>/` with a
+timestamp-prefixed filename. Use `--copy` when the source should remain in
+place. Use `--dry-run` to print the source, action, and target before changing
+files.
+
+Asset categories route as follows:
+
+- `image`, `images`, `photo`, and `screenshot` route to `assets/images/`.
+- `attachment`, `attachments`, and `pdf` route to `assets/attachments/`.
+- `import`, `imports`, `dataset`, and `export` route to `assets/imports/`.
+
+Pass a single `--topic` path such as `network-scanning` or
+`sql-injection/login-forms`. Each segment must be lowercase kebab-case. The
+target slug comes from `--slug`, then `--title`, then the source filename stem;
+it must be two to four lowercase ASCII words. Sources under `.creds/` or
+`.no-commit/` require `--sensitive-ok` after manual review. Do not curate
+sensitive screenshots, photos, PDFs, or account pages unless they have been
+redacted and are intentionally safe to keep in Git.
+
 ## Local Checks
 
 Run the same checks before committing:

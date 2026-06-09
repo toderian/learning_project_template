@@ -13,6 +13,21 @@ BUCHAREST = ZoneInfo("Europe/Bucharest")
 
 AREA_SLUG_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 NOTE_SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+){1,3}$")
+ASSET_TOPIC_SEGMENT_PATTERN = AREA_SLUG_PATTERN
+ASSET_CATEGORY_ALIASES = {
+    "attachment": "attachments",
+    "attachments": "attachments",
+    "dataset": "imports",
+    "export": "imports",
+    "image": "images",
+    "images": "images",
+    "import": "imports",
+    "imports": "imports",
+    "pdf": "attachments",
+    "photo": "images",
+    "screenshot": "images",
+}
+ASSET_CATEGORIES = frozenset(sorted(set(ASSET_CATEGORY_ALIASES.values())))
 
 
 @dataclass(frozen=True)
@@ -60,16 +75,46 @@ def validate_note_slug(value: str) -> str:
     return value
 
 
+def validate_asset_category(value: str) -> str:
+    category = ASSET_CATEGORY_ALIASES.get(value.lower())
+    if category is None:
+        valid = ", ".join(sorted(ASSET_CATEGORY_ALIASES))
+        raise ValueError(f"CATEGORY must be one of {valid}")
+    return category
+
+
+def validate_asset_topic_path(value: str) -> tuple[str, ...]:
+    segments = value.split("/")
+    if not value or any(segment == "" for segment in segments):
+        raise ValueError("--topic must be a slash-separated lowercase kebab-case path")
+    for segment in segments:
+        if not ASSET_TOPIC_SEGMENT_PATTERN.fullmatch(segment):
+            raise ValueError("--topic must be a slash-separated lowercase kebab-case path")
+    return tuple(segments)
+
+
 def title_from_slug(value: str) -> str:
     return " ".join(part.capitalize() for part in value.split("-"))
 
 
-def slug_from_title(title: str) -> str:
-    normalized = unicodedata.normalize("NFKD", title).encode("ascii", "ignore").decode("ascii")
+def slug_from_text(value: str, source_name: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
     words = re.findall(r"[A-Za-z0-9]+", normalized.lower())
     if len(words) < 2:
-        raise ValueError("could not derive a 2 to 4 word slug from TITLE; pass --slug")
+        raise ValueError(f"could not derive a 2 to 4 word slug from {source_name}; pass --slug")
     return validate_note_slug("-".join(words[:4]))
+
+
+def slug_from_title(title: str) -> str:
+    return slug_from_text(title, "TITLE")
+
+
+def derive_asset_slug(slug: str | None, title: str | None, source_stem: str) -> str:
+    if slug is not None:
+        return validate_note_slug(slug)
+    if title is not None:
+        return slug_from_text(title, "TITLE")
+    return slug_from_text(source_stem, "source filename")
 
 
 def parse_code_cell(cell: str, column: str, line: str) -> str:

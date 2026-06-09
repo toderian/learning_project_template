@@ -423,6 +423,295 @@ def test_curated_asset_topic_folders_must_be_kebab_case(vault_root: Path) -> Non
     assert_has_error(vault_root, "must be lowercase kebab-case")
 
 
+def test_curated_asset_category_folders_must_be_supported(vault_root: Path) -> None:
+    asset = vault_root / f"04_areas/web-security/assets/photos/network-scanning/{NOTE_STEM}_nmap-scan-output.png"
+    asset.parent.mkdir(parents=True, exist_ok=True)
+    asset.write_bytes(b"\x89PNG\r\n\x1a\n")
+
+    assert_has_error(vault_root, "asset category must be one of")
+
+
+def test_new_asset_cli_moves_image_to_expected_path(vault_root: Path) -> None:
+    run_cli(vault_root, "create_area.py", "web-security", "--timestamp", NOTE_TIMESTAMP)
+    source = vault_root / "source-scan.PNG"
+    source.write_bytes(b"\x89PNG\r\n\x1a\n")
+
+    result = run_cli(
+        vault_root,
+        "new_asset.py",
+        "image",
+        source.as_posix(),
+        "--area",
+        "web-security",
+        "--topic",
+        "network-scanning",
+        "--title",
+        "Nmap scan output",
+        "--timestamp",
+        NOTE_TIMESTAMP,
+    )
+
+    target = vault_root / f"04_areas/web-security/assets/images/network-scanning/{NOTE_STEM}_nmap-scan-output.png"
+    assert result.returncode == 0
+    assert result.stdout == f"Created {target.relative_to(vault_root).as_posix()}\n"
+    assert result.stderr == ""
+    assert target.read_bytes() == b"\x89PNG\r\n\x1a\n"
+    assert not source.exists()
+    assert_valid(vault_root)
+
+
+def test_new_asset_cli_copy_mode_leaves_source_in_place(vault_root: Path) -> None:
+    run_cli(vault_root, "create_area.py", "web-security", "--timestamp", NOTE_TIMESTAMP)
+    source = vault_root / "lab-notes.PDF"
+    source.write_bytes(b"%PDF-1.7\n")
+
+    result = run_cli(
+        vault_root,
+        "new_asset.py",
+        "pdf",
+        source.as_posix(),
+        "--area",
+        "web-security",
+        "--topic",
+        "sql-injection",
+        "--title",
+        "Lab notes",
+        "--timestamp",
+        NOTE_TIMESTAMP,
+        "--copy",
+    )
+
+    target = vault_root / f"04_areas/web-security/assets/attachments/sql-injection/{NOTE_STEM}_lab-notes.pdf"
+    assert result.returncode == 0
+    assert target.read_bytes() == b"%PDF-1.7\n"
+    assert source.read_bytes() == b"%PDF-1.7\n"
+    assert_valid(vault_root)
+
+
+def test_new_asset_cli_dry_run_does_not_write_or_move(vault_root: Path) -> None:
+    run_cli(vault_root, "create_area.py", "web-security", "--timestamp", NOTE_TIMESTAMP)
+    source = vault_root / "exported-chat.JSON"
+    source.write_bytes(b'{"ok": true}\n')
+
+    result = run_cli(
+        vault_root,
+        "new_asset.py",
+        "import",
+        source.as_posix(),
+        "--area",
+        "web-security",
+        "--topic",
+        "chatgpt-exports",
+        "--title",
+        "Exported chat",
+        "--timestamp",
+        NOTE_TIMESTAMP,
+        "--dry-run",
+    )
+
+    target = vault_root / f"04_areas/web-security/assets/imports/chatgpt-exports/{NOTE_STEM}_exported-chat.json"
+    assert result.returncode == 0
+    assert f"Source: {source}\n" in result.stdout
+    assert "Action: move\n" in result.stdout
+    assert f"Target: {target.relative_to(vault_root).as_posix()}\n" in result.stdout
+    assert f"Would create {target.relative_to(vault_root).as_posix()}\n" in result.stdout
+    assert source.is_file()
+    assert not target.exists()
+
+
+def test_new_asset_cli_accepts_nested_topic_path(vault_root: Path) -> None:
+    run_cli(vault_root, "create_area.py", "web-security", "--timestamp", NOTE_TIMESTAMP)
+    source = vault_root / "login-form.jpeg"
+    source.write_bytes(b"\xff\xd8\xff")
+
+    result = run_cli(
+        vault_root,
+        "new_asset.py",
+        "screenshot",
+        source.as_posix(),
+        "--area",
+        "web-security",
+        "--topic",
+        "sql-injection/login-forms",
+        "--title",
+        "Login form",
+        "--timestamp",
+        NOTE_TIMESTAMP,
+    )
+
+    target = vault_root / f"04_areas/web-security/assets/images/sql-injection/login-forms/{NOTE_STEM}_login-form.jpeg"
+    assert result.returncode == 0
+    assert target.is_file()
+    assert_valid(vault_root)
+
+
+@pytest.mark.parametrize(
+    ("args", "expected"),
+    [
+        (
+            ("image", "source-scan.png", "--area", "missing-area", "--topic", "network-scanning"),
+            "area 'missing-area' does not exist",
+        ),
+        (
+            ("image", "source-scan.png", "--area", "web-security", "--topic", "Network Scanning"),
+            "--topic must be a slash-separated lowercase kebab-case path",
+        ),
+        (
+            ("photos", "source-scan.png", "--area", "web-security", "--topic", "network-scanning"),
+            "CATEGORY must be one of",
+        ),
+        (
+            ("image", "missing.png", "--area", "web-security", "--topic", "network-scanning"),
+            "source file does not exist",
+        ),
+        (
+            ("image", "source-dir", "--area", "web-security", "--topic", "network-scanning"),
+            "SOURCE must be a file, not a directory",
+        ),
+        (
+            ("image", "source-scan", "--area", "web-security", "--topic", "network-scanning"),
+            "SOURCE must have a file extension",
+        ),
+        (
+            (
+                "image",
+                "source-scan.png",
+                "--area",
+                "web-security",
+                "--topic",
+                "network-scanning",
+                "--timestamp",
+                "2026-06-09T14:30:12",
+            ),
+            "--timestamp must include a timezone offset",
+        ),
+        (
+            ("image", "oneword.png", "--area", "web-security", "--topic", "network-scanning"),
+            "could not derive a 2 to 4 word slug from source filename",
+        ),
+    ],
+)
+def test_new_asset_cli_invalid_inputs_fail_nonzero(
+    vault_root: Path,
+    args: tuple[str, ...],
+    expected: str,
+) -> None:
+    run_cli(vault_root, "create_area.py", "web-security", "--timestamp", NOTE_TIMESTAMP)
+    (vault_root / "source-scan.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+    (vault_root / "oneword.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+    (vault_root / "source-scan").write_text("extensionless\n", encoding="utf-8")
+    (vault_root / "source-dir").mkdir()
+
+    cli_args = list(args)
+    if "--timestamp" not in args:
+        cli_args.extend(["--timestamp", NOTE_TIMESTAMP])
+    result = run_cli(vault_root, "new_asset.py", *cli_args)
+
+    assert result.returncode == 2
+    assert expected in result.stderr
+
+
+def test_new_asset_cli_duplicate_target_fails_nonzero(vault_root: Path) -> None:
+    run_cli(vault_root, "create_area.py", "web-security", "--timestamp", NOTE_TIMESTAMP)
+    first_source = vault_root / "first-source.png"
+    second_source = vault_root / "second-source.png"
+    first_source.write_bytes(b"first\n")
+    second_source.write_bytes(b"second\n")
+
+    first = run_cli(
+        vault_root,
+        "new_asset.py",
+        "image",
+        first_source.as_posix(),
+        "--area",
+        "web-security",
+        "--topic",
+        "network-scanning",
+        "--title",
+        "Nmap scan output",
+        "--timestamp",
+        NOTE_TIMESTAMP,
+    )
+    second = run_cli(
+        vault_root,
+        "new_asset.py",
+        "image",
+        second_source.as_posix(),
+        "--area",
+        "web-security",
+        "--topic",
+        "network-scanning",
+        "--title",
+        "Nmap scan output",
+        "--timestamp",
+        NOTE_TIMESTAMP,
+    )
+
+    assert first.returncode == 0
+    assert second.returncode == 2
+    assert "target already exists" in second.stderr
+    assert second_source.is_file()
+
+
+@pytest.mark.parametrize("private_folder", [".creds", ".no-commit"])
+def test_new_asset_cli_sensitive_sources_require_explicit_flag(vault_root: Path, private_folder: str) -> None:
+    run_cli(vault_root, "create_area.py", "web-security", "--timestamp", NOTE_TIMESTAMP)
+    source = vault_root / private_folder / "private-capture.png"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_bytes(b"secret-content-do-not-print\n")
+
+    result = run_cli(
+        vault_root,
+        "new_asset.py",
+        "image",
+        source.as_posix(),
+        "--area",
+        "web-security",
+        "--topic",
+        "network-scanning",
+        "--title",
+        "Private capture",
+        "--timestamp",
+        NOTE_TIMESTAMP,
+    )
+
+    assert result.returncode == 2
+    assert f"source under {private_folder}/ requires --sensitive-ok" in result.stderr
+    assert "secret-content-do-not-print" not in result.stdout
+    assert "secret-content-do-not-print" not in result.stderr
+    assert source.is_file()
+
+
+def test_new_asset_cli_sensitive_source_with_flag_succeeds_without_printing_contents(vault_root: Path) -> None:
+    run_cli(vault_root, "create_area.py", "web-security", "--timestamp", NOTE_TIMESTAMP)
+    source = vault_root / ".no-commit" / "private-capture.png"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_bytes(b"secret-content-do-not-print\n")
+
+    result = run_cli(
+        vault_root,
+        "new_asset.py",
+        "image",
+        source.as_posix(),
+        "--area",
+        "web-security",
+        "--topic",
+        "network-scanning",
+        "--title",
+        "Private capture",
+        "--timestamp",
+        NOTE_TIMESTAMP,
+        "--sensitive-ok",
+    )
+
+    target = vault_root / f"04_areas/web-security/assets/images/network-scanning/{NOTE_STEM}_private-capture.png"
+    assert result.returncode == 0
+    assert target.read_bytes() == b"secret-content-do-not-print\n"
+    assert not source.exists()
+    assert "secret-content-do-not-print" not in result.stdout
+    assert "secret-content-do-not-print" not in result.stderr
+
+
 @pytest.mark.parametrize("private_folder", [".creds", ".no-commit"])
 def test_tracked_private_folder_content_fails(vault_root: Path, private_folder: str) -> None:
     private_file = vault_root / private_folder / "local.txt"

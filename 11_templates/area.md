@@ -25,9 +25,9 @@ review_after:
 - `memory/`
 - `projects/`
 - `outputs/`
-- `assets/images/<topic-or-subtopic>/`
-- `assets/attachments/<topic-or-subtopic>/`
-- `assets/imports/<topic-or-subtopic>/`
+- `assets/images/<topic-path>/`
+- `assets/attachments/<topic-path>/`
+- `assets/imports/<topic-path>/`
 - `archive/`
 
 ## Review Notes

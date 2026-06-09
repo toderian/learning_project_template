@@ -2,7 +2,7 @@
 type: system
 status: stable
 created: 2026-06-08
-updated: 2026-06-08
+updated: 2026-06-09
 tags: [system, lfs]
 ---
 
@@ -39,7 +39,7 @@ To use the example LFS rules:
 ```bash
 git lfs install
 cp .gitattributes.example .gitattributes
-git lfs track "04_areas/**/assets/**/*.pdf"
+git lfs track "04_areas/**/assets/attachments/**/*.pdf"
 git add .gitattributes
 git add "04_areas/<area>/assets/attachments/large-file.pdf"
 git commit -m "track large asset with git lfs"

@@ -10,6 +10,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from vault_common import ASSET_CATEGORIES, ASSET_TOPIC_SEGMENT_PATTERN
+
 try:
     import yaml
 except ImportError:  # pragma: no cover - fallback for minimal Python installs.
@@ -50,10 +56,8 @@ class ValidationResult:
 TIMESTAMPED_NAME_PATTERN = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{6}[+-]\d{4}_[a-z0-9]+(?:-[a-z0-9]+){1,3}$"
 )
-SLUG_SEGMENT_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 
 PRIVATE_FOLDERS = (".creds", ".no-commit")
-ASSET_CATEGORIES = {"attachments", "images", "imports"}
 REQUIRED_GITIGNORE_PATTERNS = {
     ".creds/": ".creds/.vault-validation-probe",
     ".no-commit/": ".no-commit/.vault-validation-probe",
@@ -502,7 +506,7 @@ def check_asset_path(path: Path) -> None:
     if len(parts) < 6:
         error(
             f"{relative}: curated assets must live under "
-            "04_areas/<area>/assets/<images|attachments|imports>/<topic-or-subtopic>/"
+            "04_areas/<area>/assets/<images|attachments|imports>/<topic-path>/"
         )
         return
 
@@ -511,7 +515,7 @@ def check_asset_path(path: Path) -> None:
         error(f"{relative}: asset category must be one of {', '.join(sorted(ASSET_CATEGORIES))}")
 
     for topic_segment in parts[4:-1]:
-        if not SLUG_SEGMENT_PATTERN.fullmatch(topic_segment):
+        if not ASSET_TOPIC_SEGMENT_PATTERN.fullmatch(topic_segment):
             error(f"{relative}: asset topic folder '{topic_segment}' must be lowercase kebab-case")
 
 
@@ -606,7 +610,13 @@ def check_script_structure() -> None:
 
     if scripts_readme.exists():
         readme_text = read_text(scripts_readme)
-        for required in ["validate.sh", "validate_vault.py", "list_due_memory.py", "rewrite_wikilinks.py"]:
+        for required in [
+            "validate.sh",
+            "validate_vault.py",
+            "new_asset.py",
+            "list_due_memory.py",
+            "rewrite_wikilinks.py",
+        ]:
             if required not in readme_text:
                 error(f"12_tools/scripts/README.md must document {required}")
 

@@ -115,13 +115,13 @@ Curated area-local assets use the same stem convention and must live under a
 category plus topic folder:
 
 ```text
-04_areas/<area>/assets/images/<topic-or-subtopic>/2026-06-09T143012+0300_nmap-scan-output.png
-04_areas/<area>/assets/attachments/<topic-or-subtopic>/2026-06-09T143012+0300_lab-notes.pdf
-04_areas/<area>/assets/imports/<topic-or-subtopic>/2026-06-09T143012+0300_exported-chat.json
+04_areas/<area>/assets/images/<topic-path>/2026-06-09T143012+0300_nmap-scan-output.png
+04_areas/<area>/assets/attachments/<topic-path>/2026-06-09T143012+0300_lab-notes.pdf
+04_areas/<area>/assets/imports/<topic-path>/2026-06-09T143012+0300_exported-chat.json
 ```
 
-Asset topic folders use lowercase kebab-case. Nested topic folders are allowed
-for subtopics, for example `assets/images/web-security/sql-injection/`.
+Asset topic paths are slash-separated lowercase kebab-case segments, for
+example `assets/images/sql-injection/login-forms/`.
 
 `README.md`, system docs, templates, journal notes, and agent/tool docs are exempt.
 
