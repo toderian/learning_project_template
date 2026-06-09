@@ -1,6 +1,14 @@
 .DS_Store
 Thumbs.db
 .trash/
+
+.idea/
+.vscode/
+.fleet/
+*.swp
+*.swo
+*~
+
 .env
 .env.*
 *.log
