@@ -2,7 +2,7 @@
 type: system
 status: stable
 created: 2026-06-08
-updated: 2026-06-08
+updated: 2026-06-09
 tags: [system, schema]
 ---
 
@@ -111,11 +111,17 @@ Area-local content and Markdown inbox captures use filesystem-safe local Europe/
 YYYY-MM-DDTHHMMSS+HHMM_2-to-4-word-slug.md
 ```
 
-Curated area-local assets use the same stem convention, for example:
+Curated area-local assets use the same stem convention and must live under a
+category plus topic folder:
 
 ```text
-2026-06-09T143012+0300_nmap-scan-output.png
+04_areas/<area>/assets/images/<topic-or-subtopic>/2026-06-09T143012+0300_nmap-scan-output.png
+04_areas/<area>/assets/attachments/<topic-or-subtopic>/2026-06-09T143012+0300_lab-notes.pdf
+04_areas/<area>/assets/imports/<topic-or-subtopic>/2026-06-09T143012+0300_exported-chat.json
 ```
+
+Asset topic folders use lowercase kebab-case. Nested topic folders are allowed
+for subtopics, for example `assets/images/web-security/sql-injection/`.
 
 `README.md`, system docs, templates, journal notes, and agent/tool docs are exempt.
 

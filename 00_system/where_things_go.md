@@ -21,7 +21,7 @@ Use this routing guide when filing notes or assets.
 - Understanding in your own words: `04_areas/<area>/notes/`
 - Recall practice or review log: `04_areas/<area>/memory/`
 - Deliverable, summary, report, essay, or study plan: `04_areas/<area>/outputs/`
-- Referenced curated asset: `04_areas/<area>/assets/`
+- Referenced curated asset: `04_areas/<area>/assets/<category>/<topic-or-subtopic>/`
 - Agent workflow, safety material, or staged agent memory: `10_agents/`
 - Reusable note structure: `11_templates/`
 - Small vault-adjacent script: `12_tools/`
@@ -35,6 +35,24 @@ Use this routing guide when filing notes or assets.
 - Use `04_areas/<area>/notes/wiki/` for stable reference pages that collect factual context.
 - Use `04_areas/<area>/notes/mocs/` for maps of related notes, resources, projects, and outputs.
 - Use `04_areas/<area>/notes/synthesis/` for cross-source explanations, arguments, or models.
+
+## Asset Routing
+
+Temporary screenshots stay in `01_inbox/screenshots/`. Temporary pasted files,
+imports, and unknown-topic attachments stay in `01_inbox/raw_files/` or
+`01_inbox/pdfs/`.
+
+Curated area-known assets use topic folders:
+
+- images, photos, and screenshots:
+  `04_areas/<area>/assets/images/<topic-or-subtopic>/`
+- PDFs and other attachments:
+  `04_areas/<area>/assets/attachments/<topic-or-subtopic>/`
+- source exports, raw datasets, and imported context:
+  `04_areas/<area>/assets/imports/<topic-or-subtopic>/`
+
+Use lowercase kebab-case for topic folders and timestamp-prefixed filenames,
+for example `2026-06-09T143012+0300_nmap-scan-output.png`.
 
 ## New Areas
 

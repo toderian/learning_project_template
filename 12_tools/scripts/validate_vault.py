@@ -50,8 +50,10 @@ class ValidationResult:
 TIMESTAMPED_NAME_PATTERN = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{6}[+-]\d{4}_[a-z0-9]+(?:-[a-z0-9]+){1,3}$"
 )
+SLUG_SEGMENT_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 
 PRIVATE_FOLDERS = (".creds", ".no-commit")
+ASSET_CATEGORIES = {"attachments", "images", "imports"}
 REQUIRED_GITIGNORE_PATTERNS = {
     ".creds/": ".creds/.vault-validation-probe",
     ".no-commit/": ".no-commit/.vault-validation-probe",
@@ -485,6 +487,32 @@ def check_paths(paths: list[Path]) -> None:
             error(f"{relative}: generated tool output must not be committed")
         if path.is_file() and (relative.endswith(".sqlite") or relative.endswith(".db") or relative.endswith(".log")):
             error(f"{relative}: generated database or log file must not be committed")
+        if path.is_file():
+            check_asset_path(path)
+
+
+def check_asset_path(path: Path) -> None:
+    parts = path.relative_to(ROOT).parts
+    if len(parts) < 4 or parts[0] != "04_areas" or parts[2] != "assets":
+        return
+    if path.name == "README.md":
+        return
+
+    relative = rel(path)
+    if len(parts) < 6:
+        error(
+            f"{relative}: curated assets must live under "
+            "04_areas/<area>/assets/<images|attachments|imports>/<topic-or-subtopic>/"
+        )
+        return
+
+    category = parts[3]
+    if category not in ASSET_CATEGORIES:
+        error(f"{relative}: asset category must be one of {', '.join(sorted(ASSET_CATEGORIES))}")
+
+    for topic_segment in parts[4:-1]:
+        if not SLUG_SEGMENT_PATTERN.fullmatch(topic_segment):
+            error(f"{relative}: asset topic folder '{topic_segment}' must be lowercase kebab-case")
 
 
 def check_gitignore() -> None:

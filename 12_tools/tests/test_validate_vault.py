@@ -384,7 +384,7 @@ def test_review_after_datetime_fails_but_date_only_passes(vault_root: Path) -> N
 
 
 def test_valid_area_asset_embed_passes_and_broken_embed_fails(vault_root: Path) -> None:
-    asset = vault_root / f"04_areas/web-security/assets/{NOTE_STEM}_nmap-scan-output.png"
+    asset = vault_root / f"04_areas/web-security/assets/images/network-scanning/{NOTE_STEM}_nmap-scan-output.png"
     asset.parent.mkdir(parents=True, exist_ok=True)
     asset.write_bytes(b"\x89PNG\r\n\x1a\n")
     write_note(
@@ -392,7 +392,7 @@ def test_valid_area_asset_embed_passes_and_broken_embed_fails(vault_root: Path) 
         f"04_areas/web-security/notes/atomic/{NOTE_STEM}_asset-embed-note.md",
         "atomic",
         title="Asset Embed Note",
-        body=f"![[04_areas/web-security/assets/{NOTE_STEM}_nmap-scan-output.png]]",
+        body=f"![[04_areas/web-security/assets/images/network-scanning/{NOTE_STEM}_nmap-scan-output.png]]",
     )
     assert_valid(vault_root)
 
@@ -405,6 +405,22 @@ def test_valid_area_asset_embed_passes_and_broken_embed_fails(vault_root: Path) 
     )
 
     assert_has_error(vault_root, "broken wikilink")
+
+
+def test_curated_assets_require_category_and_topic_folder(vault_root: Path) -> None:
+    direct_asset = vault_root / f"04_areas/web-security/assets/images/{NOTE_STEM}_direct-image.png"
+    direct_asset.parent.mkdir(parents=True, exist_ok=True)
+    direct_asset.write_bytes(b"\x89PNG\r\n\x1a\n")
+
+    assert_has_error(vault_root, "curated assets must live under")
+
+
+def test_curated_asset_topic_folders_must_be_kebab_case(vault_root: Path) -> None:
+    asset = vault_root / f"04_areas/web-security/assets/images/Network Scanning/{NOTE_STEM}_nmap-scan-output.png"
+    asset.parent.mkdir(parents=True, exist_ok=True)
+    asset.write_bytes(b"\x89PNG\r\n\x1a\n")
+
+    assert_has_error(vault_root, "must be lowercase kebab-case")
 
 
 @pytest.mark.parametrize("private_folder", [".creds", ".no-commit"])

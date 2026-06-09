@@ -2,7 +2,7 @@
 type: system
 status: stable
 created: 2026-06-08
-updated: 2026-06-08
+updated: 2026-06-09
 tags: [system, obsidian]
 ---
 
@@ -21,7 +21,10 @@ Only these `.obsidian` files are part of the public template:
 
 `app.json` should contain only portable attachment and default-folder settings.
 
-Pasted attachments should land in `01_inbox/raw_files/` first. Move curated assets later into the relevant `04_areas/<area>/assets/` subfolder with a timestamp-prefixed filename.
+Pasted attachments should land in `01_inbox/raw_files/` first. Move curated
+assets later into the relevant topic folder under
+`04_areas/<area>/assets/<images|attachments|imports>/<topic-or-subtopic>/`
+with a timestamp-prefixed filename.
 
 ## Ignored Runtime Config
 

@@ -45,8 +45,11 @@ name.
     study_plans/
   assets/
     attachments/
+      <topic-or-subtopic>/
     images/
+      <topic-or-subtopic>/
     imports/
+      <topic-or-subtopic>/
   archive/
 ```
 
@@ -56,3 +59,8 @@ material under the matching area folder.
 Use `12_tools/scripts/new_note.py TYPE TITLE --area <area>` for timestamped
 area-local Markdown notes. Use `new_note.py inbox TITLE --area <area>` for
 known-topic captures that still need triage.
+
+Curated images, photos, screenshots, PDFs, and other attachments should be
+filed under `assets/<category>/<topic-or-subtopic>/` with timestamp-prefixed
+filenames. Use nested lowercase kebab-case topic folders when a subtopic needs
+its own grouping.

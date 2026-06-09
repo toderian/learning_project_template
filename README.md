@@ -44,6 +44,8 @@ This repo is a personal exemplar. Edit the root docs, policies, templates, and f
 - Keep non-area file and folder names lowercase or snake_case with no spaces.
 - Use lowercase kebab-case for area folder names.
 - Use timestamp-prefixed filenames for Markdown inbox captures and area-local content.
+- File curated visual inputs and attachments under
+  `04_areas/<area>/assets/<category>/<topic-or-subtopic>/`.
 - Keep unknown-topic material in `01_inbox/`; file known-topic material under `04_areas/<area>/`.
 - Use area-local `inbox` for known-topic captures that still need triage.
 - Keep personal data, credentials, runtime state, databases, and generated caches out of Git.
