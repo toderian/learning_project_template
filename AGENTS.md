@@ -45,6 +45,14 @@ Exception: `10_agents/memory/candidates/` is an approved write scope for bounded
 
 Approved CLI or agent moves must update inbound wikilinks with `12_tools/scripts/rewrite_wikilinks.py` or an equivalent reviewed process. If link rewriting is unsafe, leave files in place and produce a proposal.
 
+## Local Private Folders
+
+`.creds/` is local-only storage for credentials, keys, tokens, and private config that agents may use only for explicit user-requested tasks. Agents must read the minimum needed file, avoid printing secret values, prefer passing secrets through environment variables or standard tool config, and never copy secrets into notes, logs, commits, prompts, or summaries.
+
+`.no-commit/` is local-only storage for files that must remain outside Git. Agents may read or write there only when the user asks for local scratch or private uncommitted files.
+
+Both folders are ignored by Git. Do not force-add them.
+
 ## Forbidden Runtime State
 
 Do not commit active MCP, hook, or auto-run agent configuration. The public template commits skills and documentation only.
@@ -61,6 +69,8 @@ Ignore:
 - `.codex/hooks.json`
 - `.claude/settings.json`
 - `.claude/settings.local.json`
+- `.creds/`
+- `.no-commit/`
 
 ## Manual Canary
 

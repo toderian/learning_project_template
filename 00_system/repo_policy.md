@@ -21,6 +21,8 @@ Keep the template lightweight, portable, and safe to clone.
 ## Ignore
 
 - secrets and `.env` files;
+- local credentials in `.creds/`;
+- local private scratch files in `.no-commit/`;
 - logs, caches, generated outputs, and runtime state;
 - vector databases, transcript databases, local sidecar state, and Chroma stores;
 - active MCP, hook, or auto-run agent config;

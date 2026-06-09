@@ -11,6 +11,8 @@ Thumbs.db
 
 .env
 .env.*
+.creds/
+.no-commit/
 *.log
 .cache/
 tmp/

@@ -38,6 +38,10 @@ Agents need explicit user approval before editing:
 - do not modify protected paths;
 - do not treat the canary as proof that CI can guarantee prompt-injection resistance.
 
+## Local Private Storage
+
+Use [local_private_storage.md](local_private_storage.md) for `.creds/` and `.no-commit/` rules. Agents may use `.creds/` only for explicit user-requested tasks and must never print or commit secret values.
+
 ## Runtime Config
 
 The public template must not include active MCP, hook, sidecar, or auto-run agent configuration. Documentation and bounded skill files are allowed.
