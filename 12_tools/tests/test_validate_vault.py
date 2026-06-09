@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import shutil
 import subprocess
 import sys
@@ -14,6 +15,7 @@ SCRIPTS_DIR = Path("12_tools") / "scripts"
 VALIDATOR_PATH = REPO_ROOT / SCRIPTS_DIR / "validate_vault.py"
 NOTE_TIMESTAMP = "2026-06-09T14:30:12+03:00"
 NOTE_STEM = "2026-06-09T143012+0300"
+FAKE_OPENAI_KEY = "sk-" + "1234567890abcdefghijklmnop"
 
 spec = importlib.util.spec_from_file_location("validate_vault_under_test", VALIDATOR_PATH)
 assert spec is not None
@@ -64,6 +66,11 @@ def run_cli(root: Path, script: str, *args: str) -> subprocess.CompletedProcess[
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+
+
+def create_test_area(root: Path, area: str = "web-security") -> None:
+    result = run_cli(root, "create_area.py", area, "--timestamp", NOTE_TIMESTAMP)
+    assert result.returncode == 0, result.stderr
 
 
 def assert_valid(root: Path) -> None:
@@ -324,6 +331,7 @@ def test_new_note_cli_duplicate_target_fails_nonzero(vault_root: Path) -> None:
 
 
 def test_inbox_type_is_valid_in_global_and_area_local_routes(vault_root: Path) -> None:
+    create_test_area(vault_root)
     write_note(
         vault_root,
         f"01_inbox/quick_notes/{NOTE_STEM}_untyped-capture.md",
@@ -340,6 +348,47 @@ def test_inbox_type_is_valid_in_global_and_area_local_routes(vault_root: Path) -
     assert_valid(vault_root)
 
 
+def test_area_folder_names_must_be_lowercase_kebab_case(vault_root: Path) -> None:
+    write_note(
+        vault_root,
+        f"04_areas/WebSecurity/notes/atomic/{NOTE_STEM}_invalid-area-slug.md",
+        "atomic",
+        title="Invalid Area Slug",
+    )
+
+    assert_has_error(vault_root, "area folder must be lowercase kebab-case")
+
+
+def test_area_content_requires_readme_marker(vault_root: Path) -> None:
+    write_note(
+        vault_root,
+        f"04_areas/web-security/notes/atomic/{NOTE_STEM}_missing-area-marker.md",
+        "atomic",
+        title="Missing Area Marker",
+    )
+
+    assert_has_error(vault_root, "area README marker is missing")
+
+
+def test_area_readme_marker_requires_valid_frontmatter(vault_root: Path) -> None:
+    area_readme = vault_root / "04_areas/web-security/README.md"
+    area_readme.parent.mkdir(parents=True, exist_ok=True)
+    area_readme.write_text("# Web Security\n", encoding="utf-8")
+
+    assert_has_error(vault_root, "area README marker is missing YAML frontmatter")
+
+
+def test_area_readme_marker_type_must_be_area(vault_root: Path) -> None:
+    area_readme = vault_root / "04_areas/web-security/README.md"
+    area_readme.parent.mkdir(parents=True, exist_ok=True)
+    area_readme.write_text(
+        note_text("atomic", "Web Security"),
+        encoding="utf-8",
+    )
+
+    assert_has_error(vault_root, "area README marker type must be 'area'")
+
+
 def test_old_global_routes_fail_validation(vault_root: Path) -> None:
     write_note(
         vault_root,
@@ -352,6 +401,7 @@ def test_old_global_routes_fail_validation(vault_root: Path) -> None:
 
 
 def test_non_timestamped_area_notes_fail_validation(vault_root: Path) -> None:
+    create_test_area(vault_root)
     write_note(
         vault_root,
         "04_areas/web-security/notes/atomic/sql-injection-basics.md",
@@ -363,6 +413,7 @@ def test_non_timestamped_area_notes_fail_validation(vault_root: Path) -> None:
 
 
 def test_review_after_datetime_fails_but_date_only_passes(vault_root: Path) -> None:
+    create_test_area(vault_root)
     write_note(
         vault_root,
         f"04_areas/web-security/notes/atomic/{NOTE_STEM}_date-only-review.md",
@@ -384,6 +435,7 @@ def test_review_after_datetime_fails_but_date_only_passes(vault_root: Path) -> N
 
 
 def test_valid_area_asset_embed_passes_and_broken_embed_fails(vault_root: Path) -> None:
+    create_test_area(vault_root)
     asset = vault_root / f"04_areas/web-security/assets/images/network-scanning/{NOTE_STEM}_nmap-scan-output.png"
     asset.parent.mkdir(parents=True, exist_ok=True)
     asset.write_bytes(b"\x89PNG\r\n\x1a\n")
@@ -408,6 +460,7 @@ def test_valid_area_asset_embed_passes_and_broken_embed_fails(vault_root: Path) 
 
 
 def test_curated_assets_require_category_and_topic_folder(vault_root: Path) -> None:
+    create_test_area(vault_root)
     direct_asset = vault_root / f"04_areas/web-security/assets/images/{NOTE_STEM}_direct-image.png"
     direct_asset.parent.mkdir(parents=True, exist_ok=True)
     direct_asset.write_bytes(b"\x89PNG\r\n\x1a\n")
@@ -416,6 +469,7 @@ def test_curated_assets_require_category_and_topic_folder(vault_root: Path) -> N
 
 
 def test_curated_asset_topic_folders_must_be_kebab_case(vault_root: Path) -> None:
+    create_test_area(vault_root)
     asset = vault_root / f"04_areas/web-security/assets/images/Network Scanning/{NOTE_STEM}_nmap-scan-output.png"
     asset.parent.mkdir(parents=True, exist_ok=True)
     asset.write_bytes(b"\x89PNG\r\n\x1a\n")
@@ -424,6 +478,7 @@ def test_curated_asset_topic_folders_must_be_kebab_case(vault_root: Path) -> Non
 
 
 def test_curated_asset_category_folders_must_be_supported(vault_root: Path) -> None:
+    create_test_area(vault_root)
     asset = vault_root / f"04_areas/web-security/assets/photos/network-scanning/{NOTE_STEM}_nmap-scan-output.png"
     asset.parent.mkdir(parents=True, exist_ok=True)
     asset.write_bytes(b"\x89PNG\r\n\x1a\n")
@@ -431,9 +486,44 @@ def test_curated_asset_category_folders_must_be_supported(vault_root: Path) -> N
     assert_has_error(vault_root, "asset category must be one of")
 
 
+def test_curated_assets_require_supported_lowercase_extensions(vault_root: Path) -> None:
+    create_test_area(vault_root)
+    extensionless = vault_root / f"04_areas/web-security/assets/images/network-scanning/{NOTE_STEM}_scan-output"
+    uppercase = vault_root / f"04_areas/web-security/assets/images/network-scanning/{NOTE_STEM}_scan-output.PNG"
+    wrong_category = vault_root / f"04_areas/web-security/assets/images/network-scanning/{NOTE_STEM}_lab-notes.pdf"
+    for asset in [extensionless, uppercase, wrong_category]:
+        asset.parent.mkdir(parents=True, exist_ok=True)
+        asset.write_bytes(b"asset\n")
+
+    result = validate(vault_root)
+
+    assert any("asset must have a lowercase supported file extension" in error for error in result.errors)
+    assert any("asset extension must be lowercase" in error for error in result.errors)
+    assert any("asset extension '.pdf' is not supported for images" in error for error in result.errors)
+
+
+def test_curated_assets_over_five_mb_require_lfs(vault_root: Path) -> None:
+    create_test_area(vault_root)
+    asset = vault_root / f"04_areas/web-security/assets/images/network-scanning/{NOTE_STEM}_large-capture.png"
+    asset.parent.mkdir(parents=True, exist_ok=True)
+    asset.write_bytes(b"0" * (5 * 1024 * 1024 + 1))
+
+    assert_has_error(vault_root, "curated asset is above 5 MB and is not tracked by Git LFS")
+
+
+def test_non_asset_over_five_mb_warns_without_failing(vault_root: Path) -> None:
+    large_file = vault_root / "01_inbox/raw_files/large-export.bin"
+    large_file.write_bytes(b"0" * (5 * 1024 * 1024 + 1))
+
+    result = validate(vault_root)
+
+    assert result.errors == []
+    assert any("file is above 5 MB" in warning for warning in result.warnings)
+
+
 def test_new_asset_cli_moves_image_to_expected_path(vault_root: Path) -> None:
     run_cli(vault_root, "create_area.py", "web-security", "--timestamp", NOTE_TIMESTAMP)
-    source = vault_root / "source-scan.PNG"
+    source = vault_root / "source-scan.png"
     source.write_bytes(b"\x89PNG\r\n\x1a\n")
 
     result = run_cli(
@@ -462,7 +552,7 @@ def test_new_asset_cli_moves_image_to_expected_path(vault_root: Path) -> None:
 
 def test_new_asset_cli_copy_mode_leaves_source_in_place(vault_root: Path) -> None:
     run_cli(vault_root, "create_area.py", "web-security", "--timestamp", NOTE_TIMESTAMP)
-    source = vault_root / "lab-notes.PDF"
+    source = vault_root / "lab-notes.pdf"
     source.write_bytes(b"%PDF-1.7\n")
 
     result = run_cli(
@@ -490,7 +580,7 @@ def test_new_asset_cli_copy_mode_leaves_source_in_place(vault_root: Path) -> Non
 
 def test_new_asset_cli_dry_run_does_not_write_or_move(vault_root: Path) -> None:
     run_cli(vault_root, "create_area.py", "web-security", "--timestamp", NOTE_TIMESTAMP)
-    source = vault_root / "exported-chat.JSON"
+    source = vault_root / "exported-chat.json"
     source.write_bytes(b'{"ok": true}\n')
 
     result = run_cli(
@@ -573,6 +663,18 @@ def test_new_asset_cli_accepts_nested_topic_path(vault_root: Path) -> None:
             "SOURCE must have a file extension",
         ),
         (
+            ("image", "source-scan.PNG", "--area", "web-security", "--topic", "network-scanning"),
+            "asset extension must be lowercase",
+        ),
+        (
+            ("image", "lab-notes.pdf", "--area", "web-security", "--topic", "network-scanning"),
+            "asset extension '.pdf' is not supported for images",
+        ),
+        (
+            ("pdf", "source-scan.png", "--area", "web-security", "--topic", "network-scanning"),
+            "asset extension '.png' is not supported for attachments",
+        ),
+        (
             (
                 "image",
                 "source-scan.png",
@@ -598,6 +700,8 @@ def test_new_asset_cli_invalid_inputs_fail_nonzero(
 ) -> None:
     run_cli(vault_root, "create_area.py", "web-security", "--timestamp", NOTE_TIMESTAMP)
     (vault_root / "source-scan.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+    (vault_root / "source-scan.PNG").write_bytes(b"\x89PNG\r\n\x1a\n")
+    (vault_root / "lab-notes.pdf").write_bytes(b"%PDF-1.7\n")
     (vault_root / "oneword.png").write_bytes(b"\x89PNG\r\n\x1a\n")
     (vault_root / "source-scan").write_text("extensionless\n", encoding="utf-8")
     (vault_root / "source-dir").mkdir()
@@ -748,3 +852,107 @@ def test_private_folder_unignore_patterns_fail_validation(
         handle.write(f"{pattern}\n")
 
     assert_has_error(vault_root, "private folder unignore pattern is forbidden")
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        ".agents/runtime.json",
+        ".claude/skills/vault_capture/notes.md",
+        ".codex/session.json",
+    ],
+)
+def test_agent_runtime_files_must_be_allowlisted(vault_root: Path, relative: str) -> None:
+    path = vault_root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("{}\n", encoding="utf-8")
+
+    assert_has_error(vault_root, "agent file is not in the allowlist")
+
+
+@pytest.mark.parametrize("private_folder", [".creds", ".no-commit"])
+def test_ignored_private_markdown_is_not_read_by_validator(vault_root: Path, private_folder: str) -> None:
+    private_file = vault_root / private_folder / "private-note.md"
+    private_file.parent.mkdir(parents=True, exist_ok=True)
+    private_file.write_text(
+        f"{FAKE_OPENAI_KEY}\n[[missing-private-target]]\n",
+        encoding="utf-8",
+    )
+
+    assert_valid(vault_root)
+
+
+@pytest.mark.parametrize("tracked", [False, True])
+def test_symlink_markdown_fails_validation_without_opening_target(vault_root: Path, tracked: bool) -> None:
+    target = vault_root / ".no-commit" / "secret-target.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(f"{FAKE_OPENAI_KEY}\n", encoding="utf-8")
+    link = vault_root / "01_inbox/quick_notes" / f"{NOTE_STEM}_linked-secret.md"
+    try:
+        os.symlink(target, link)
+    except OSError as exc:  # pragma: no cover - platform guard.
+        pytest.skip(f"symlink creation is unavailable: {exc}")
+    if tracked:
+        run(["git", "add", link.relative_to(vault_root).as_posix()], vault_root)
+
+    result = validate(vault_root)
+
+    assert any("symlinks are not allowed" in error for error in result.errors)
+    assert not any("possible secret detected" in error for error in result.errors)
+
+
+def test_rewrite_wikilinks_skips_ignored_private_markdown(vault_root: Path) -> None:
+    public_note = write_note(
+        vault_root,
+        f"01_inbox/quick_notes/{NOTE_STEM}_public-link.md",
+        "inbox",
+        title="Public Link",
+        body="[[old-note]]",
+    )
+    private_note = vault_root / ".no-commit" / "private-link.md"
+    private_note.parent.mkdir(parents=True, exist_ok=True)
+    private_note.write_text("[[old-note]]\nsecret-content-do-not-print\n", encoding="utf-8")
+
+    dry_run = run_cli(vault_root, "rewrite_wikilinks.py", "--root", ".", "--from", "old-note", "--to", "new-note")
+    write_run = run_cli(
+        vault_root,
+        "rewrite_wikilinks.py",
+        "--root",
+        ".",
+        "--from",
+        "old-note",
+        "--to",
+        "new-note",
+        "--write",
+    )
+
+    assert dry_run.returncode == 0
+    assert write_run.returncode == 0
+    assert public_note.relative_to(vault_root).as_posix() in dry_run.stdout
+    assert ".no-commit" not in dry_run.stdout
+    assert "secret-content-do-not-print" not in dry_run.stdout
+    assert "[[new-note]]" in public_note.read_text(encoding="utf-8")
+    assert "[[old-note]]" in private_note.read_text(encoding="utf-8")
+
+
+def test_list_due_memory_skips_ignored_private_markdown(vault_root: Path) -> None:
+    write_note(
+        vault_root,
+        f"01_inbox/quick_notes/{NOTE_STEM}_public-review.md",
+        "inbox",
+        title="Public Review",
+        extra_frontmatter="review_after: 2026-06-01",
+    )
+    private_note = vault_root / ".creds" / "private-review.md"
+    private_note.parent.mkdir(parents=True, exist_ok=True)
+    private_note.write_text(
+        note_text("inbox", "Private Review", extra_frontmatter="review_after: 2026-06-01"),
+        encoding="utf-8",
+    )
+
+    result = run_cli(vault_root, "list_due_memory.py", ".", "--date", "2026-06-09")
+
+    assert result.returncode == 0
+    assert "Public Review" in result.stdout
+    assert "Private Review" not in result.stdout
+    assert ".creds" not in result.stdout

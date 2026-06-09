@@ -61,10 +61,12 @@ Asset categories route as follows:
 Pass a single `--topic` path such as `network-scanning` or
 `sql-injection/login-forms`. Each segment must be lowercase kebab-case. The
 target slug comes from `--slug`, then `--title`, then the source filename stem;
-it must be two to four lowercase ASCII words. Sources under `.creds/` or
-`.no-commit/` require `--sensitive-ok` after manual review. Do not curate
-sensitive screenshots, photos, PDFs, or account pages unless they have been
-redacted and are intentionally safe to keep in Git.
+it must be two to four lowercase ASCII words. Source extensions must already be
+lowercase and compatible with the selected category. Curated assets over 5 MB
+must be tracked by Git LFS. Sources under `.creds/` or `.no-commit/` require
+`--sensitive-ok` after manual review. Do not curate sensitive screenshots,
+photos, PDFs, or account pages unless they have been redacted and are
+intentionally safe to keep in Git.
 
 ## Local Checks
 
@@ -75,10 +77,12 @@ uv venv
 uv pip install -r requirements.txt
 .venv/bin/python -m pytest
 12_tools/scripts/validate.sh
+docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/gitleaks/gitleaks:v8.30.1 git --redact --no-banner .
 git diff --check
 ```
 
 `git diff --check` catches whitespace errors that the validator may not report.
+The Gitleaks command scans git history and redacts detected secret values.
 
 ## Validation
 

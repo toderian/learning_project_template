@@ -5,9 +5,16 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
+
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from vault_common import safe_scan_files
 
 try:
     import yaml
@@ -137,8 +144,8 @@ def heading_for_non_fenced_line(lines: list[tuple[int, str]], index: int) -> str
 
 def collect_due(root: Path, cutoff: date, include_examples: bool = False) -> list[DueItem]:
     items: list[DueItem] = []
-    for path in sorted(root.rglob("*.md")):
-        if ".git" in path.parts:
+    for path in safe_scan_files(root):
+        if path.suffix != ".md":
             continue
         relative = path.relative_to(root).as_posix()
         text = path.read_text(encoding="utf-8")

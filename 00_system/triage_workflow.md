@@ -28,6 +28,10 @@ Triage turns capture into usable material.
 
 If uncertain, leave the item in `01_inbox/agent_inbox/` with a short reason.
 
+Agent-assisted triage should produce a proposal first. Use dry-run output for
+moves, renames, asset filing, and wikilink rewrites until the user approves the
+write.
+
 ## Promotion
 
 Promote only when the note is useful, understandable later, and filed in the right area-local folder. Add `review_after` when the note needs a future decision.

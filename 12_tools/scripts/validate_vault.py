@@ -14,7 +14,16 @@ SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from vault_common import ASSET_CATEGORIES, ASSET_TOPIC_SEGMENT_PATTERN
+from vault_common import (
+    AREA_SLUG_PATTERN,
+    ASSET_CATEGORIES,
+    ASSET_TOPIC_SEGMENT_PATTERN,
+    PRIVATE_SCAN_ROOTS,
+    git_ls_files,
+    safe_scan_files,
+    safe_scan_paths,
+    validate_asset_extension,
+)
 
 try:
     import yaml
@@ -57,7 +66,15 @@ TIMESTAMPED_NAME_PATTERN = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{6}[+-]\d{4}_[a-z0-9]+(?:-[a-z0-9]+){1,3}$"
 )
 
-PRIVATE_FOLDERS = (".creds", ".no-commit")
+PRIVATE_FOLDERS = tuple(sorted(PRIVATE_SCAN_ROOTS))
+SKILL_NAMES = {
+    "vault_capture",
+    "vault_memory_update",
+    "vault_search",
+    "vault_summarize",
+    "vault_synthesize",
+    "vault_triage",
+}
 REQUIRED_GITIGNORE_PATTERNS = {
     ".creds/": ".creds/.vault-validation-probe",
     ".no-commit/": ".no-commit/.vault-validation-probe",
@@ -87,45 +104,12 @@ def warn(message: str) -> None:
     WARNINGS.append(message)
 
 
-def git_ls_files(*args: str) -> set[str] | None:
-    result = subprocess.run(
-        ["git", "ls-files", "-z", *args],
-        cwd=ROOT,
-        check=False,
-        text=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-    )
-    if result.returncode != 0:
-        return None
-    return {
-        item.decode("utf-8")
-        for item in result.stdout.split(b"\0")
-        if item
-    }
-
-
 def scan_files() -> list[Path]:
     global SCAN_FILES_CACHE
     if SCAN_FILES_CACHE is not None:
         return SCAN_FILES_CACHE
 
-    tracked = git_ls_files("--cached")
-    unignored = git_ls_files("--others", "--exclude-standard")
-    if tracked is None or unignored is None:
-        files = [
-            path
-            for path in ROOT.rglob("*")
-            if ".git" not in path.relative_to(ROOT).parts and path.is_file()
-        ]
-    else:
-        files = [
-            ROOT / relative
-            for relative in sorted(tracked | unignored)
-            if (ROOT / relative).is_file()
-        ]
-
-    SCAN_FILES_CACHE = sorted(files, key=rel)
+    SCAN_FILES_CACHE = list(safe_scan_files(ROOT))
     return SCAN_FILES_CACHE
 
 
@@ -134,18 +118,7 @@ def all_paths() -> list[Path]:
     if SCAN_PATHS_CACHE is not None:
         return SCAN_PATHS_CACHE
 
-    paths: set[Path] = set(scan_files())
-    for file_path in scan_files():
-        parent = file_path.parent
-        while parent != ROOT:
-            try:
-                parent.relative_to(ROOT)
-            except ValueError:
-                break
-            paths.add(parent)
-            parent = parent.parent
-
-    SCAN_PATHS_CACHE = sorted(paths, key=rel)
+    SCAN_PATHS_CACHE = list(safe_scan_paths(ROOT))
     return SCAN_PATHS_CACHE
 
 
@@ -420,6 +393,25 @@ def path_matches_route(relative: str, route: str) -> bool:
     )
 
 
+def is_allowed_agent_file(relative: str) -> bool:
+    parts = relative.split("/")
+    if parts[0] in {".agents", ".claude"}:
+        return (
+            len(parts) == 4
+            and parts[1] == "skills"
+            and parts[2] in SKILL_NAMES
+            and parts[3] == "SKILL.md"
+        )
+    if parts[0] == ".codex":
+        return relative == ".codex/README.md"
+    return True
+
+
+def is_curated_asset(path: Path) -> bool:
+    parts = path.relative_to(ROOT).parts
+    return len(parts) >= 4 and parts[0] == "04_areas" and parts[2] == "assets" and path.name != "README.md"
+
+
 def check_paths(paths: list[Path]) -> None:
     for path in paths:
         relative = rel(path)
@@ -472,6 +464,9 @@ def check_paths(paths: list[Path]) -> None:
 
     for path in paths:
         relative = rel(path)
+        if path.is_symlink():
+            error(f"{relative}: symlinks are not allowed")
+            continue
         parts = set(path.relative_to(ROOT).parts)
         if relative in forbidden_exact:
             error(f"{relative}: forbidden runtime or secret path")
@@ -485,6 +480,9 @@ def check_paths(paths: list[Path]) -> None:
             error(f"{relative}: removed global topic layer; use 04_areas/<area>/ instead")
         if forbidden_parts & parts:
             error(f"{relative}: forbidden generated or dependency artifact")
+        if path.is_file() and relative.split("/", 1)[0] in {".agents", ".claude", ".codex"}:
+            if not is_allowed_agent_file(relative):
+                error(f"{relative}: agent file is not in the allowlist")
         if path.is_file() and relative.startswith(".obsidian/") and relative not in allowed_obsidian:
             error(f"{relative}: .obsidian file is not in the allowlist")
         if path.is_file() and relative.startswith("12_tools/outputs/") and relative != "12_tools/outputs/README.md":
@@ -513,10 +511,47 @@ def check_asset_path(path: Path) -> None:
     category = parts[3]
     if category not in ASSET_CATEGORIES:
         error(f"{relative}: asset category must be one of {', '.join(sorted(ASSET_CATEGORIES))}")
+    elif path.is_file():
+        try:
+            validate_asset_extension(category, path.suffix)
+        except ValueError as exc:
+            error(f"{relative}: {exc}")
 
     for topic_segment in parts[4:-1]:
         if not ASSET_TOPIC_SEGMENT_PATTERN.fullmatch(topic_segment):
             error(f"{relative}: asset topic folder '{topic_segment}' must be lowercase kebab-case")
+
+
+def check_area_markers(paths: list[Path]) -> None:
+    areas: set[str] = set()
+    for path in paths:
+        parts = path.relative_to(ROOT).parts
+        if len(parts) < 2 or parts[0] != "04_areas" or parts[1] == "README.md":
+            continue
+        area = parts[1]
+        areas.add(area)
+        if not AREA_SLUG_PATTERN.fullmatch(area):
+            error(f"04_areas/{area}: area folder must be lowercase kebab-case")
+
+    for area in sorted(areas):
+        marker = ROOT / "04_areas" / area / "README.md"
+        relative = f"04_areas/{area}/README.md"
+        if marker.is_symlink():
+            error(f"{relative}: area README marker must be a regular file")
+            continue
+        if not marker.is_file():
+            error(f"{relative}: area README marker is missing")
+            continue
+        parsed = parse_frontmatter(read_text(marker), marker)
+        if parsed is None:
+            error(f"{relative}: area README marker is missing YAML frontmatter")
+            continue
+        data, _body = parsed
+        for required_key in ["type", "status", "created", "updated", "tags"]:
+            if required_key not in data:
+                error(f"{relative}: area README marker missing frontmatter key '{required_key}'")
+        if data.get("type", "") != "area":
+            error(f"{relative}: area README marker type must be 'area'")
 
 
 def check_gitignore() -> None:
@@ -577,7 +612,7 @@ def check_gitignore() -> None:
 
 
 def check_private_folder_tracking() -> None:
-    tracked = git_ls_files("--cached")
+    tracked = git_ls_files(ROOT, "--cached")
     if tracked is None:
         return
     for relative in sorted(tracked):
@@ -951,23 +986,17 @@ def check_large_files() -> None:
     for path in all_files():
         relative = rel(path)
         size = path.stat().st_size
-        if size > block_threshold and relative not in lfs_files:
+        if is_curated_asset(path) and size > warn_threshold and relative not in lfs_files:
+            error(f"{relative}: curated asset is above 5 MB and is not tracked by Git LFS")
+        elif size > block_threshold and relative not in lfs_files:
             error(f"{relative}: file is above 25 MB and is not tracked by Git LFS")
         elif size > warn_threshold and relative not in lfs_files:
             warn(f"{relative}: file is above 5 MB")
 
 
 def check_skills() -> None:
-    skill_names = {
-        "vault_capture",
-        "vault_triage",
-        "vault_search",
-        "vault_summarize",
-        "vault_synthesize",
-        "vault_memory_update",
-    }
     for root in [".agents/skills", ".claude/skills"]:
-        for name in sorted(skill_names):
+        for name in sorted(SKILL_NAMES):
             path = ROOT / root / name / "SKILL.md"
             if not path.exists():
                 error(f"{root}/{name}/SKILL.md: missing skill file")
@@ -1017,6 +1046,7 @@ def run_checks(root: str | Path) -> ValidationResult:
     schema_rows = parse_schema()
 
     check_paths(paths)
+    check_area_markers(paths)
     check_gitignore()
     check_private_folder_tracking()
     check_script_structure()

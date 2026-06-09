@@ -15,6 +15,7 @@ from vault_common import (
     resolve_root,
     validate_area_slug,
     validate_asset_category,
+    validate_asset_extension,
     validate_asset_topic_path,
 )
 
@@ -95,7 +96,7 @@ def plan_asset_path(
     validate_sensitive_source(root, (lexical_source.absolute(), source), sensitive_ok)
 
     asset_slug = derive_asset_slug(slug, title, source.stem)
-    extension = source.suffix.lower()
+    extension = validate_asset_extension(category, source.suffix)
     target = (
         root
         / "04_areas"

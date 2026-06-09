@@ -5,7 +5,14 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 from pathlib import Path
+
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from vault_common import safe_scan_files
 
 WIKILINK = re.compile(r"\[\[([^\]]+)\]\]")
 
@@ -26,8 +33,8 @@ def normalize_target(value: str) -> str:
 
 def markdown_note_index(root: Path) -> dict[str, list[str]]:
     by_stem: dict[str, list[str]] = {}
-    for path in sorted(root.rglob("*.md")):
-        if ".git" in path.parts:
+    for path in safe_scan_files(root):
+        if path.suffix != ".md":
             continue
         relative = path.relative_to(root).with_suffix("").as_posix()
         by_stem.setdefault(path.stem, []).append(relative)
@@ -104,8 +111,8 @@ def main() -> int:
     new_target = normalize_target(args.new)
     total = 0
 
-    for path in sorted(root.rglob("*.md")):
-        if ".git" in path.parts:
+    for path in safe_scan_files(root):
+        if path.suffix != ".md":
             continue
         text = path.read_text(encoding="utf-8")
         rewritten, changes = rewrite_text(text, old_variants, new_target)

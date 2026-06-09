@@ -10,6 +10,10 @@ tags: [system, lfs]
 
 Git LFS is optional. The public template works without it.
 
+Curated assets under `04_areas/<area>/assets/` must use Git LFS when they are
+larger than 5 MB. Non-asset files above 5 MB produce a warning, and non-asset
+files above 25 MB must use Git LFS.
+
 ## Use LFS For
 
 - large curated PDFs;

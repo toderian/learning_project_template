@@ -95,6 +95,13 @@ Route patterns use `*` for one area folder name.
 | `error_log` | extended | `02_journal/reflections/` | `error_log.md` |
 | `archive` | extended | `04_areas/*/archive/` | none |
 
+## Asset File Class
+
+`asset` is a structural file class for curated files under
+`04_areas/<area>/assets/`, not a Markdown sidecar note type. Use normal note
+types to discuss or cite an asset. Do not create Markdown notes with
+`type: asset`.
+
 ## Date Rules
 
 - `created` and `updated` should use full ISO 8601 timestamps with timezone for new area and inbox notes, for example `2026-06-09T14:30:12+03:00`.

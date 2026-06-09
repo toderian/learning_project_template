@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
@@ -28,6 +29,57 @@ ASSET_CATEGORY_ALIASES = {
     "screenshot": "images",
 }
 ASSET_CATEGORIES = frozenset(sorted(set(ASSET_CATEGORY_ALIASES.values())))
+ASSET_EXTENSIONS_BY_CATEGORY = {
+    "attachments": frozenset(
+        {
+            ".docx",
+            ".epub",
+            ".pdf",
+            ".pptx",
+            ".txt",
+            ".xlsx",
+            ".zip",
+        }
+    ),
+    "images": frozenset(
+        {
+            ".gif",
+            ".jpeg",
+            ".jpg",
+            ".png",
+            ".svg",
+            ".webp",
+        }
+    ),
+    "imports": frozenset(
+        {
+            ".csv",
+            ".har",
+            ".htm",
+            ".html",
+            ".json",
+            ".jsonl",
+            ".ndjson",
+            ".txt",
+            ".xml",
+            ".yaml",
+            ".yml",
+            ".zip",
+        }
+    ),
+}
+PRIVATE_SCAN_ROOTS = frozenset({".creds", ".no-commit"})
+FALLBACK_EXCLUDED_PARTS = frozenset(
+    {
+        ".cache",
+        ".git",
+        ".pytest_cache",
+        ".venv",
+        "__pycache__",
+        "node_modules",
+        "venv",
+    }
+) | PRIVATE_SCAN_ROOTS
 
 
 @dataclass(frozen=True)
@@ -81,6 +133,18 @@ def validate_asset_category(value: str) -> str:
         valid = ", ".join(sorted(ASSET_CATEGORY_ALIASES))
         raise ValueError(f"CATEGORY must be one of {valid}")
     return category
+
+
+def validate_asset_extension(category: str, extension: str) -> str:
+    if not extension:
+        raise ValueError("asset must have a lowercase supported file extension")
+    if extension != extension.lower():
+        raise ValueError("asset extension must be lowercase")
+    supported = ASSET_EXTENSIONS_BY_CATEGORY[category]
+    if extension not in supported:
+        valid = ", ".join(sorted(supported))
+        raise ValueError(f"asset extension '{extension}' is not supported for {category}; expected one of {valid}")
+    return extension
 
 
 def validate_asset_topic_path(value: str) -> tuple[str, ...]:
@@ -147,6 +211,88 @@ def parse_schema(root: Path) -> dict[str, SchemaRow]:
     if not rows:
         raise ValueError("00_system/schema.md: no note types parsed from schema table")
     return rows
+
+
+def git_ls_files(root: Path, *args: str) -> set[str] | None:
+    result = subprocess.run(
+        ["git", "ls-files", "-z", *args],
+        cwd=root,
+        check=False,
+        text=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    if result.returncode != 0:
+        return None
+    return {
+        item.decode("utf-8")
+        for item in result.stdout.split(b"\0")
+        if item
+    }
+
+
+def is_private_relative_path(relative: str) -> bool:
+    first = relative.split("/", 1)[0]
+    return first in PRIVATE_SCAN_ROOTS
+
+
+def _fallback_scan_paths(root: Path) -> set[str]:
+    relatives: set[str] = set()
+    for path in root.rglob("*"):
+        try:
+            relative_path = path.relative_to(root)
+        except ValueError:
+            continue
+        if set(relative_path.parts) & FALLBACK_EXCLUDED_PARTS:
+            continue
+        relatives.add(relative_path.as_posix())
+    return relatives
+
+
+def discover_tracked_unignored_paths(root: Path) -> tuple[Path, ...]:
+    tracked = git_ls_files(root, "--cached")
+    unignored = git_ls_files(root, "--others", "--exclude-standard")
+    relatives = _fallback_scan_paths(root) if tracked is None or unignored is None else tracked | unignored
+    paths = [
+        root / relative
+        for relative in sorted(relatives)
+        if not is_private_relative_path(relative)
+    ]
+    return tuple(paths)
+
+
+def safe_scan_files(root: Path) -> tuple[Path, ...]:
+    files: list[Path] = []
+    for path in discover_tracked_unignored_paths(root):
+        if path.is_symlink():
+            continue
+        if path.is_file():
+            files.append(path)
+    return tuple(sorted(files, key=lambda path: path.relative_to(root).as_posix()))
+
+
+def scan_symlinks(root: Path) -> tuple[Path, ...]:
+    symlinks = [
+        path
+        for path in discover_tracked_unignored_paths(root)
+        if path.is_symlink()
+    ]
+    return tuple(sorted(symlinks, key=lambda path: path.relative_to(root).as_posix()))
+
+
+def safe_scan_paths(root: Path) -> tuple[Path, ...]:
+    paths: set[Path] = set(safe_scan_files(root))
+    paths.update(scan_symlinks(root))
+    for path in tuple(paths):
+        parent = path.parent
+        while parent != root:
+            try:
+                parent.relative_to(root)
+            except ValueError:
+                break
+            paths.add(parent)
+            parent = parent.parent
+    return tuple(sorted(paths, key=lambda path: path.relative_to(root).as_posix()))
 
 
 def render_template(template_text: str, title: str, timestamp: datetime) -> str:

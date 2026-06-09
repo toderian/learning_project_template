@@ -54,8 +54,10 @@ Curated area-known assets use topic folders:
 Use `12_tools/scripts/new_asset.py` to file curated assets. It moves by
 default, uses `--copy` for non-destructive filing, and accepts a slash-separated
 lowercase kebab-case `--topic` path such as `sql-injection/login-forms`.
-Filenames use timestamp-prefixed two- to four-word slugs, for example
+Filenames use timestamp-prefixed two- to four-word slugs and lowercase
+category-compatible extensions, for example
 `2026-06-09T143012+0300_nmap-scan-output.png`.
+Curated assets over 5 MB must be tracked by Git LFS.
 
 Screenshots, photos, PDFs, and other visual inputs that include credentials,
 personal data, account pages, client data, or private context belong in
