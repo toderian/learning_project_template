@@ -12,28 +12,32 @@ Use this routing guide when filing notes or assets.
 
 ## Quick Routing
 
-- Unprocessed capture: `01_inbox/`
+- Unknown-topic capture: `01_inbox/`
 - Time-based log, study session, decision, or reflection: `02_journal/`
-- Active outcome with an end condition: `03_projects/`
-- Ongoing responsibility or skill domain: `04_areas/`
-- External source: `05_resources/`
-- Understanding in your own words: `06_knowledge/`
-- Recall practice or review log: `07_memory/`
-- Deliverable, summary, report, essay, or study plan: `08_outputs/`
-- Referenced curated asset: `09_assets/`
+- Known learning topic: `04_areas/<area>/`
+- Active outcome with an end condition: `04_areas/<area>/projects/`
+- External source: `04_areas/<area>/resources/`
+- Understanding in your own words: `04_areas/<area>/notes/`
+- Recall practice or review log: `04_areas/<area>/memory/`
+- Deliverable, summary, report, essay, or study plan: `04_areas/<area>/outputs/`
+- Referenced curated asset: `04_areas/<area>/assets/`
 - Agent workflow, safety material, or staged agent memory: `10_agents/`
 - Reusable note structure: `11_templates/`
 - Small vault-adjacent script: `12_tools/`
-- Inactive but worth keeping: `99_archive/`
+- Inactive area-local material worth keeping: `04_areas/<area>/archive/`
 
 ## Knowledge Routing
 
-- Use `06_knowledge/fleeting/` for rough thoughts that may be deleted, merged, or promoted later.
-- Use `06_knowledge/literature/` for notes tied closely to one source.
-- Use `06_knowledge/atomic/` for one durable idea written in your own words.
-- Use `06_knowledge/wiki/` for stable reference pages that collect factual context.
-- Use `06_knowledge/mocs/` for maps of related notes, resources, projects, and outputs.
-- Use `06_knowledge/synthesis/` for cross-source explanations, arguments, or models.
+- Use `04_areas/<area>/notes/fleeting/` for rough thoughts that may be deleted, merged, or promoted later.
+- Use `04_areas/<area>/notes/literature/` for notes tied closely to one source.
+- Use `04_areas/<area>/notes/atomic/` for one durable idea written in your own words.
+- Use `04_areas/<area>/notes/wiki/` for stable reference pages that collect factual context.
+- Use `04_areas/<area>/notes/mocs/` for maps of related notes, resources, projects, and outputs.
+- Use `04_areas/<area>/notes/synthesis/` for cross-source explanations, arguments, or models.
+
+## New Areas
+
+Create a new area manually from the skeleton in [../04_areas/README.md](../04_areas/README.md). Do not create placeholder areas before there is real material to file.
 
 ## If Unsure
 

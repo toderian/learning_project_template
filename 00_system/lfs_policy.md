@@ -39,9 +39,9 @@ To use the example LFS rules:
 ```bash
 git lfs install
 cp .gitattributes.example .gitattributes
-git lfs track "09_assets/**/*.pdf"
+git lfs track "04_areas/**/assets/**/*.pdf"
 git add .gitattributes
-git add 09_assets/attachments/large_file.pdf
+git add "04_areas/<area>/assets/attachments/large-file.pdf"
 git commit -m "track large asset with git lfs"
 ```
 

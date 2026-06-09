@@ -10,7 +10,7 @@ Use `validate.sh` as the single validation entrypoint for local work and CI.
 
 `validate.sh` runs:
 
-- `validate_vault.py` for schema, path, YAML, wikilink, secret, artifact, example, and skill-boundary checks;
+- `validate_vault.py` for schema, route, filename, YAML, wikilink, secret, artifact, and skill-boundary checks;
 - `markdownlint-cli2` for Markdown style checks.
 
 Keep validator logic in script files. Do not add large inline validators to shell wrappers or workflow YAML. If a validation rule changes, edit `validate_vault.py` and keep `validate.sh` as a small orchestration wrapper.
@@ -30,7 +30,7 @@ Local requirements:
 
 Lists note-level `review_after` items and card-level `due::` items due on or before the selected date.
 
-Notes tagged `example` are skipped by default. Add `--include-examples` to include scaffold examples.
+Notes tagged `example`, if any exist, are skipped by default. Add `--include-examples` to include them.
 
 ## Wikilink Rewrites
 

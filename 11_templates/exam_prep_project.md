@@ -9,6 +9,8 @@ review_after:
 
 # Exam Prep Project
 
+## Area
+
 ## Exam Goal
 
 ## Scope

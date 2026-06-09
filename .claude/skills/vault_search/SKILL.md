@@ -7,7 +7,7 @@ description: Search and report on vault content without editing files.
 
 ## Allowed Reads
 
-- Markdown notes, templates, examples, and system docs in the vault.
+- Markdown notes, templates, and system docs in the vault.
 
 ## Allowed Writes
 

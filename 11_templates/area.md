@@ -9,12 +9,23 @@ review_after:
 
 # Area
 
-## Standard
+## Scope
 
 ## Current Focus
 
 ## Related Projects
 
 -
+
+## Local Structure
+
+- `inbox/`
+- `resources/`
+- `notes/`
+- `memory/`
+- `projects/`
+- `outputs/`
+- `assets/`
+- `archive/`
 
 ## Review Notes

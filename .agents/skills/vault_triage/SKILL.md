@@ -14,6 +14,7 @@ description: Propose inbox filing and perform approved moves with wikilink updat
 ## Allowed Writes
 
 - Move or rename approved notes only after user approval.
+- Move known-topic material into `04_areas/*/` routes.
 - Update inbound wikilinks with `12_tools/scripts/rewrite_wikilinks.py` or an equivalent reviewed process.
 
 ## Forbidden Paths
@@ -27,4 +28,4 @@ Propose moves by default. Ask before moving, renaming, deleting, archiving, or r
 
 ## Workflow
 
-Classify each item, explain the destination, and identify link updates. If link rewriting is unsafe, leave files in place and produce a proposal.
+Classify each item, explain the area-local destination, and identify link updates. Route known-topic material into the relevant `04_areas/*/` folder and leave unknown-topic material in the global inbox. If link rewriting is unsafe, leave files in place and produce a proposal.

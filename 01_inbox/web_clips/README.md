@@ -1,3 +1,3 @@
 # Web Clips
 
-Temporary web captures before they become resources or notes.
+Temporary web captures before they become area-local resources or notes.

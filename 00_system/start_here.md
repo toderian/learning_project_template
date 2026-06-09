@@ -8,22 +8,23 @@ tags: [system]
 
 # Start Here
 
-This vault is a Markdown-first learning project. Use it for capture, journaling, projects, areas, resources, knowledge notes, recall practice, outputs, and safe agent-assisted workflows.
+This vault is a Markdown-first, area-first learning project. Use it for capture, journaling, area-local resources, knowledge notes, recall practice, outputs, and safe agent-assisted workflows.
 
 ## First Five Minutes
 
-1. Capture rough notes in `01_inbox/quick_notes/`.
+1. Capture unknown-topic notes in `01_inbox/quick_notes/`.
 2. File anything obvious using [where_things_go.md](where_things_go.md).
 3. Start daily notes from `11_templates/daily_note.md`.
-4. Use examples as structure references, not as personal content.
+4. Create an area manually under `04_areas/<area>/` once a topic is real.
 5. Run `12_tools/scripts/validate.sh` before committing.
 
 ## Daily Use
 
-- Capture first; sort later.
+- Capture first; sort later when the area is unclear.
 - Prefer small notes with clear titles.
 - Use `review_after` for whole-note review.
 - Use `due::` for card-level memory practice.
+- Use timestamp-prefixed filenames for Markdown inbox captures and area-local content.
 - Keep generated outputs, databases, caches, secrets, and local runtime state out of Git.
 
 ## Knowledge Note Types

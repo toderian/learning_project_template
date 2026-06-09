@@ -15,6 +15,7 @@ description: Capture new raw notes into the inbox with safe frontmatter.
 
 - `01_inbox/quick_notes/`
 - `01_inbox/agent_inbox/`
+- `04_areas/*/inbox/`
 
 ## Forbidden Paths
 
@@ -27,4 +28,4 @@ Ask before creating more than 10 files or writing more than 1 MB of Markdown.
 
 ## Workflow
 
-Create capture notes with valid frontmatter. Preserve uncertainty instead of filing aggressively.
+Create capture notes with valid frontmatter and timestamp-prefixed filenames. Use the global inbox when the area is unknown; use `04_areas/*/inbox/` when the area is already clear. Preserve uncertainty instead of filing aggressively.

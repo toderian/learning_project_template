@@ -39,7 +39,11 @@ class SchemaRow:
     note_type: str
     default_folder: str
     default_template: str
-    example_required: bool
+
+
+TIMESTAMPED_NAME_PATTERN = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{6}[+-]\d{4}_[a-z0-9]+(?:-[a-z0-9]+){1,3}$"
+)
 
 
 def rel(path: Path) -> str:
@@ -136,6 +140,21 @@ def is_iso_date(value: str) -> bool:
     except ValueError:
         return False
     return True
+
+
+def is_iso_datetime(value: str) -> bool:
+    if "T" not in value:
+        return False
+    normalized = value.removesuffix("Z") + "+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return False
+    return parsed.tzinfo is not None
+
+
+def is_iso_date_or_datetime(value: str) -> bool:
+    return is_iso_date(value) or is_iso_datetime(value)
 
 
 def yaml_value_to_string(key: str, value: object, path: Path) -> str:
@@ -269,6 +288,19 @@ def parse_code_cell(cell: str, column: str, line: str) -> str:
     return cell.strip("`")
 
 
+def route_has_wildcard(route: str) -> bool:
+    return "*" in route.strip("/").split("/")
+
+
+def route_static_base(route: str) -> Path:
+    parts: list[str] = []
+    for part in route.strip("/").split("/"):
+        if part == "*":
+            break
+        parts.append(part)
+    return Path(*parts) if parts else Path(".")
+
+
 def parse_schema() -> dict[str, SchemaRow]:
     schema_path = ROOT / "00_system/schema.md"
     if not schema_path.exists():
@@ -281,31 +313,35 @@ def parse_schema() -> dict[str, SchemaRow]:
         if not line.startswith("| `"):
             continue
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) != 5:
+        if len(cells) != 4:
             error(f"00_system/schema.md: malformed schema table row: {line}")
             continue
         note_type = parse_code_cell(cells[0], "Type", line)
         default_folder = parse_code_cell(cells[2], "Default Folder", line)
         default_template = parse_code_cell(cells[3], "Default Template", line)
-        example_required = cells[4].lower()
 
         if note_type in rows:
             error(f"00_system/schema.md: duplicate schema type '{note_type}'")
-        if example_required not in {"yes", "no"}:
-            error(f"00_system/schema.md: Example Required must be yes or no for type '{note_type}'")
 
-        target = ROOT / default_folder
-        if default_folder.endswith(".md"):
-            if not target.is_file():
-                error(f"00_system/schema.md: default file '{default_folder}' for type '{note_type}' is missing")
-        elif not target.is_dir():
-            error(f"00_system/schema.md: default folder '{default_folder}' for type '{note_type}' is missing")
+        if route_has_wildcard(default_folder):
+            base = ROOT / route_static_base(default_folder)
+            if not base.exists():
+                error(
+                    f"00_system/schema.md: static base '{rel(base)}' for route "
+                    f"'{default_folder}' is missing"
+                )
+        else:
+            target = ROOT / default_folder
+            if default_folder.endswith(".md"):
+                if not target.is_file():
+                    error(f"00_system/schema.md: default file '{default_folder}' for type '{note_type}' is missing")
+            elif not target.is_dir():
+                error(f"00_system/schema.md: default folder '{default_folder}' for type '{note_type}' is missing")
 
         rows[note_type] = SchemaRow(
             note_type=note_type,
             default_folder=default_folder,
             default_template=default_template,
-            example_required=example_required == "yes",
         )
 
     if not rows:
@@ -329,6 +365,30 @@ def note_schema_exempt(path: Path) -> bool:
 
 def default_folder_exempt(path: Path) -> bool:
     return rel(path) == "10_agents/tests/prompt_injection_canary.md"
+
+
+def route_segment_matches(pattern_segment: str, path_segment: str) -> bool:
+    return pattern_segment == "*" or pattern_segment == path_segment
+
+
+def path_matches_route(relative: str, route: str) -> bool:
+    pattern_parts = [part for part in route.strip("/").split("/") if part]
+    path_parts = [part for part in relative.strip("/").split("/") if part]
+
+    if route.endswith("/"):
+        if len(path_parts) <= len(pattern_parts):
+            return False
+        return all(
+            route_segment_matches(pattern_part, path_part)
+            for pattern_part, path_part in zip(pattern_parts, path_parts)
+        )
+
+    if len(path_parts) != len(pattern_parts):
+        return False
+    return all(
+        route_segment_matches(pattern_part, path_part)
+        for pattern_part, path_part in zip(pattern_parts, path_parts)
+    )
 
 
 def check_paths(paths: list[Path]) -> None:
@@ -356,7 +416,16 @@ def check_paths(paths: list[Path]) -> None:
         "basic_memory/",
         "mempalace/",
         "MemPalace/",
-        "08_outputs/agent_drafts/tmp/",
+        "04_areas/*/outputs/agent_drafts/tmp/",
+    }
+    removed_global_prefixes = {
+        "03_projects/",
+        "05_resources/",
+        "06_knowledge/",
+        "07_memory/",
+        "08_outputs/",
+        "09_assets/",
+        "99_archive/",
     }
     forbidden_parts = {
         "__pycache__",
@@ -381,8 +450,10 @@ def check_paths(paths: list[Path]) -> None:
             error(f"{relative}: forbidden env file")
         if fnmatch.fnmatch(relative, ".obsidian/workspace*.json"):
             error(f"{relative}: Obsidian workspace state must not be committed")
-        if any(relative.startswith(prefix) for prefix in forbidden_prefixes):
+        if any(path_matches_route(relative, prefix) for prefix in forbidden_prefixes):
             error(f"{relative}: forbidden runtime directory content")
+        if any(relative.startswith(prefix) for prefix in removed_global_prefixes):
+            error(f"{relative}: removed global topic layer; use 04_areas/<area>/ instead")
         if forbidden_parts & parts:
             error(f"{relative}: forbidden generated or dependency artifact")
         if path.is_file() and relative.startswith(".obsidian/") and relative not in allowed_obsidian:
@@ -467,26 +538,17 @@ def check_json_files() -> None:
 
 
 def path_matches_default_folder(path: Path, default_folder: str) -> bool:
-    relative = rel(path)
-    if default_folder.endswith(".md"):
-        return relative == default_folder
-    return relative.startswith(default_folder)
+    return path_matches_route(rel(path), default_folder)
 
 
 def check_markdown_schema(schema_rows: dict[str, SchemaRow]) -> None:
     statuses = {"inbox", "draft", "active", "review", "stable", "done", "archived"}
     confidence_values = {"low", "medium", "high"}
-    note_types_seen: dict[str, list[str]] = {}
     allowed_types = set(schema_rows)
     templates = {
         row.default_template
         for row in schema_rows.values()
         if row.default_template != "none"
-    }
-    examples_required = {
-        row.note_type
-        for row in schema_rows.values()
-        if row.example_required
     }
 
     for template in sorted(templates):
@@ -538,7 +600,6 @@ def check_markdown_schema(schema_rows: dict[str, SchemaRow]) -> None:
         if note_type not in allowed_types:
             error(f"{rel(path)}: type '{note_type}' is not allowed")
         else:
-            note_types_seen.setdefault(note_type, []).append(rel(path))
             if not rel(path).startswith("11_templates/") and not default_folder_exempt(path):
                 row = schema_rows[note_type]
                 if not path_matches_default_folder(path, row.default_folder):
@@ -554,17 +615,8 @@ def check_markdown_schema(schema_rows: dict[str, SchemaRow]) -> None:
             error(f"{rel(path)}: review_after '{review_after}' is not YYYY-MM-DD")
         for date_key in ["created", "updated"]:
             date_value = data.get(date_key, "")
-            if date_value and not is_iso_date(date_value):
-                error(f"{rel(path)}: {date_key} '{date_value}' is not YYYY-MM-DD")
-
-    for note_type in sorted(examples_required):
-        examples = [
-            path
-            for path in note_types_seen.get(note_type, [])
-            if not path.startswith("11_templates/")
-        ]
-        if not examples:
-            error(f"schema example coverage: type '{note_type}' requires a committed non-template example")
+            if date_value and not is_iso_date_or_datetime(date_value):
+                error(f"{rel(path)}: {date_key} '{date_value}' is not YYYY-MM-DD or ISO 8601 datetime")
 
 
 def slugify_heading(heading: str) -> str:
@@ -705,6 +757,49 @@ def check_memory_metadata() -> None:
                     error(f"{rel(path)}:{line_number}: state:: '{value}' is not allowed")
 
 
+def filename_convention_exempt(path: Path) -> bool:
+    relative = rel(path)
+    if path.name == "README.md":
+        return True
+    if relative in {"AGENTS.md", "CLAUDE.md", "LICENSE", "README.md"}:
+        return True
+    if relative.startswith(("00_system/", "02_journal/", "10_agents/", "11_templates/", "12_tools/", "_prompts/")):
+        return True
+    if relative.startswith((".agents/", ".claude/", ".codex/", ".github/", ".obsidian/")):
+        return True
+    return False
+
+
+def requires_timestamped_filename(path: Path) -> bool:
+    if filename_convention_exempt(path):
+        return False
+
+    relative = rel(path)
+    parts = path.relative_to(ROOT).parts
+    if len(parts) >= 3 and parts[0] == "04_areas":
+        return True
+    if path.suffix == ".md" and relative.startswith("01_inbox/"):
+        return True
+    return False
+
+
+def filename_stem(path: Path) -> str:
+    if "." not in path.name:
+        return path.name
+    return path.name.rsplit(".", 1)[0]
+
+
+def check_filename_conventions() -> None:
+    for path in all_files():
+        if not requires_timestamped_filename(path):
+            continue
+        if not TIMESTAMPED_NAME_PATTERN.fullmatch(filename_stem(path)):
+            error(
+                f"{rel(path)}: filename must match "
+                "YYYY-MM-DDTHHMMSS+HHMM_2-to-4-word-slug"
+            )
+
+
 def check_secrets_and_local_paths() -> None:
     secret_patterns = [
         ("OpenAI-style API key", re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b")),
@@ -760,27 +855,6 @@ def check_large_files() -> None:
             warn(f"{relative}: file is above 5 MB")
 
 
-def check_examples_are_public() -> None:
-    example_paths = [
-        "03_projects/example_project.md",
-        "04_areas/example_area.md",
-        "05_resources/courses/example_course.md",
-        "05_resources/papers/example_paper.md",
-        "06_knowledge/atomic/example_concept.md",
-        "06_knowledge/mocs/example_moc.md",
-        "07_memory/spaced_repetition/example_deck.md",
-        "08_outputs/summaries/example_summary.md",
-    ]
-    forbidden = re.compile(r"(?i)\b(vitalii|customer name|private screenshot|real diary|oauth|password)\b|/(?:Users|home)/")
-    for relative in example_paths:
-        path = ROOT / relative
-        if not path.exists():
-            error(f"{relative}: required public example is missing")
-            continue
-        if forbidden.search(read_text(path)):
-            error(f"{relative}: example appears to contain personal or private content")
-
-
 def check_skills() -> None:
     skill_names = {
         "vault_capture",
@@ -806,11 +880,19 @@ def check_skills() -> None:
             if name == "vault_search" and "## allowed writes\n\nnone." not in lower:
                 error(f"{rel(path)}: vault_search must document no write access")
             if name == "vault_capture":
-                for allowed in ["01_inbox/quick_notes/", "01_inbox/agent_inbox/"]:
+                for allowed in ["01_inbox/quick_notes/", "01_inbox/agent_inbox/", "04_areas/*/inbox/"]:
                     if allowed not in text:
                         error(f"{rel(path)}: vault_capture missing allowed write scope {allowed}")
             if name == "vault_triage" and "rewrite_wikilinks.py" not in text:
                 error(f"{rel(path)}: vault_triage must document wikilink rewriting")
+            if name == "vault_summarize":
+                for allowed in ["01_inbox/agent_inbox/", "04_areas/*/outputs/"]:
+                    if allowed not in text:
+                        error(f"{rel(path)}: vault_summarize missing allowed write scope {allowed}")
+            if name == "vault_synthesize":
+                for allowed in ["01_inbox/agent_inbox/", "04_areas/*/notes/synthesis/"]:
+                    if allowed not in text:
+                        error(f"{rel(path)}: vault_synthesize missing allowed write scope {allowed}")
             if name == "vault_memory_update" and "10_agents/memory/candidates/" not in text:
                 error(f"{rel(path)}: vault_memory_update missing candidate write scope")
 
@@ -837,9 +919,9 @@ check_json_files()
 check_markdown_schema(schema_rows)
 check_wikilinks()
 check_memory_metadata()
+check_filename_conventions()
 check_secrets_and_local_paths()
 check_large_files()
-check_examples_are_public()
 check_skills()
 check_markdown_style_basics()
 

@@ -20,7 +20,7 @@ __pycache__/
 
 12_tools/outputs/*
 !12_tools/outputs/README.md
-08_outputs/agent_drafts/tmp/
+04_areas/*/outputs/agent_drafts/tmp/
 
 *.sqlite
 *.db

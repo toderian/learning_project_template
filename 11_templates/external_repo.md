@@ -9,15 +9,19 @@ review_after:
 
 # External Repo Entry
 
-Copy this block into `05_resources/external_repos.md` and fill it in there.
+## Repository
 
-```yaml
-name:
-url:
-status:
-owner:
-purpose:
-related_notes: []
-setup_command:
-last_reviewed:
-```
+- Name:
+- URL:
+- Owner:
+- Status:
+
+## Purpose
+
+## Setup Notes
+
+## Related Area Notes
+
+-
+
+## Last Reviewed

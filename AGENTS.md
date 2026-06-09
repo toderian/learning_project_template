@@ -18,8 +18,8 @@ Agents must keep batches modest by default. Ask for explicit approval before cre
 
 Default write scopes:
 
-- capture: `01_inbox/quick_notes/` and `01_inbox/agent_inbox/`
-- summaries and drafts: `01_inbox/agent_inbox/` and `08_outputs/agent_drafts/`
+- capture: `01_inbox/quick_notes/`, `01_inbox/agent_inbox/`, and `04_areas/<area>/inbox/`
+- summaries and drafts: `01_inbox/agent_inbox/` and relevant `04_areas/<area>/outputs/` folders
 - staged memory: `10_agents/memory/candidates/`
 - validation and template maintenance: only when the user requests template work
 

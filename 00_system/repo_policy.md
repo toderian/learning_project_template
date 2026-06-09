@@ -12,7 +12,7 @@ Keep the template lightweight, portable, and safe to clone.
 
 ## Commit
 
-- Markdown notes, templates, and examples.
+- Markdown notes, templates, and area-local content.
 - Small vault-adjacent scripts in `12_tools/scripts/`.
 - Light Obsidian config from the allowlist.
 - Agent skill files in `.agents/skills/` and `.claude/skills/`.
@@ -38,6 +38,6 @@ Do not use broad ignore patterns such as `.agents/`, `.claude/`, or `.codex/`. T
 
 ## External Labs
 
-Use separate repositories for Docker or VM labs, database projects, cyber ranges, fine-tuning experiments, GPU work, model-heavy work, large datasets, and standalone software projects. Register them in [../05_resources/external_repos.md](../05_resources/external_repos.md).
+Use separate repositories for Docker or VM labs, database projects, cyber ranges, fine-tuning experiments, GPU work, model-heavy work, large datasets, and standalone software projects.
 
-Append project-specific entries to `05_resources/external_repos.md`. The template `11_templates/external_repo.md` is a snippet for new registry entries, not a requirement to create one standalone note per repository.
+Record project-specific external repo notes under the relevant `04_areas/<area>/resources/` folder with `11_templates/external_repo.md`.

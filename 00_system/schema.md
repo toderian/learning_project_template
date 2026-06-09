@@ -8,7 +8,7 @@ tags: [system, schema]
 
 # Schema
 
-This file is the source of truth for note types, default folders, default templates, and required example coverage. Validation derives allowed `type` values and expected templates from the table below.
+This file is the source of truth for note types, default routes, and default templates. Validation derives allowed `type` values, route patterns, and expected templates from the table below.
 
 ## Default Frontmatter
 
@@ -49,55 +49,75 @@ Allowed `confidence` values are `low`, `medium`, and `high`. Confidence means re
 
 ## Type Table
 
-| Type | Tier | Default Folder | Default Template | Example Required |
-| --- | --- | --- | --- | --- |
-| `system` | extended | `00_system/` | none | no |
-| `inbox` | core | `01_inbox/quick_notes/` | `inbox_note.md` | no |
-| `journal` | core | `02_journal/daily/` | `daily_note.md` | no |
-| `weekly_review` | extended | `02_journal/weekly/` | `weekly_review.md` | no |
-| `monthly_review` | extended | `02_journal/monthly/` | `monthly_review.md` | no |
-| `quarterly_review` | extended | `02_journal/quarterly/` | `quarterly_review.md` | no |
-| `yearly_review` | extended | `02_journal/yearly/` | `yearly_review.md` | no |
-| `decision` | extended | `02_journal/decisions/` | `decision.md` | no |
-| `reflection` | extended | `02_journal/reflections/` | `reflection.md` | no |
-| `project` | core | `03_projects/` | `project.md` | yes |
-| `area` | core | `04_areas/` | `area.md` | yes |
-| `resource` | core | `05_resources/` | `resource.md` | no |
-| `course` | extended | `05_resources/courses/` | `course.md` | yes |
-| `book` | extended | `05_resources/books/` | `book.md` | no |
-| `paper` | extended | `05_resources/papers/` | `paper.md` | yes |
-| `documentation` | extended | `05_resources/documentation/` | `documentation.md` | no |
-| `video` | extended | `05_resources/videos/` | `video.md` | no |
-| `fleeting` | extended | `06_knowledge/fleeting/` | `fleeting_note.md` | no |
-| `literature` | extended | `06_knowledge/literature/` | `literature_note.md` | no |
-| `atomic` | core | `06_knowledge/atomic/` | `atomic_note.md` | yes |
-| `wiki` | extended | `06_knowledge/wiki/` | `wiki_page.md` | no |
-| `moc` | core | `06_knowledge/mocs/` | `moc.md` | yes |
-| `synthesis` | extended | `06_knowledge/synthesis/` | `synthesis.md` | no |
-| `flashcard` | core | `07_memory/spaced_repetition/` | `flashcard_deck.md` | yes |
-| `retrieval_practice` | core | `07_memory/retrieval_practice/` | `retrieval_practice.md` | no |
-| `review_log` | extended | `07_memory/review_logs/` | `review_log.md` | no |
-| `output` | core | `08_outputs/` | `output.md` | no |
-| `summary` | extended | `08_outputs/summaries/` | `summary.md` | yes |
-| `report` | extended | `08_outputs/reports/` | `report.md` | no |
-| `essay` | extended | `08_outputs/essays/` | `essay.md` | no |
-| `study_plan` | extended | `08_outputs/study_plans/` | `study_plan.md` | no |
-| `agent_draft` | extended | `08_outputs/agent_drafts/` | `agent_draft.md` | no |
-| `agent_memory` | extended | `10_agents/memory/candidates/` | none | no |
-| `external_repo` | extended | `05_resources/external_repos.md` | `external_repo.md` | no |
-| `tool` | extended | `12_tools/` | `tool.md` | no |
-| `asset` | extended | `09_assets/` | none | no |
-| `study_session` | extended | `02_journal/daily/` | `study_session.md` | no |
-| `practice_log` | extended | `02_journal/daily/` | `practice_log.md` | no |
-| `error_log` | extended | `02_journal/reflections/` | `error_log.md` | no |
-| `exam_prep_project` | extended | `03_projects/` | `exam_prep_project.md` | no |
-| `archive` | extended | `99_archive/` | none | no |
+Route patterns use `*` for one area folder name.
+
+| Type | Tier | Default Folder | Default Template |
+| --- | --- | --- | --- |
+| `system` | extended | `00_system/` | none |
+| `inbox` | core | `01_inbox/quick_notes/` | `inbox_note.md` |
+| `journal` | core | `02_journal/daily/` | `daily_note.md` |
+| `weekly_review` | extended | `02_journal/weekly/` | `weekly_review.md` |
+| `monthly_review` | extended | `02_journal/monthly/` | `monthly_review.md` |
+| `quarterly_review` | extended | `02_journal/quarterly/` | `quarterly_review.md` |
+| `yearly_review` | extended | `02_journal/yearly/` | `yearly_review.md` |
+| `decision` | extended | `02_journal/decisions/` | `decision.md` |
+| `reflection` | extended | `02_journal/reflections/` | `reflection.md` |
+| `area` | core | `04_areas/*/README.md` | `area.md` |
+| `project` | core | `04_areas/*/projects/` | `project.md` |
+| `exam_prep_project` | extended | `04_areas/*/projects/` | `exam_prep_project.md` |
+| `resource` | core | `04_areas/*/resources/` | `resource.md` |
+| `course` | extended | `04_areas/*/resources/courses/` | `course.md` |
+| `book` | extended | `04_areas/*/resources/books/` | `book.md` |
+| `paper` | extended | `04_areas/*/resources/papers/` | `paper.md` |
+| `documentation` | extended | `04_areas/*/resources/documentation/` | `documentation.md` |
+| `video` | extended | `04_areas/*/resources/videos/` | `video.md` |
+| `external_repo` | extended | `04_areas/*/resources/` | `external_repo.md` |
+| `fleeting` | extended | `04_areas/*/notes/fleeting/` | `fleeting_note.md` |
+| `literature` | extended | `04_areas/*/notes/literature/` | `literature_note.md` |
+| `atomic` | core | `04_areas/*/notes/atomic/` | `atomic_note.md` |
+| `wiki` | extended | `04_areas/*/notes/wiki/` | `wiki_page.md` |
+| `moc` | core | `04_areas/*/notes/mocs/` | `moc.md` |
+| `synthesis` | extended | `04_areas/*/notes/synthesis/` | `synthesis.md` |
+| `flashcard` | core | `04_areas/*/memory/spaced_repetition/` | `flashcard_deck.md` |
+| `retrieval_practice` | core | `04_areas/*/memory/retrieval_practice/` | `retrieval_practice.md` |
+| `review_log` | extended | `04_areas/*/memory/review_logs/` | `review_log.md` |
+| `output` | core | `04_areas/*/outputs/` | `output.md` |
+| `summary` | extended | `04_areas/*/outputs/summaries/` | `summary.md` |
+| `report` | extended | `04_areas/*/outputs/reports/` | `report.md` |
+| `essay` | extended | `04_areas/*/outputs/essays/` | `essay.md` |
+| `study_plan` | extended | `04_areas/*/outputs/study_plans/` | `study_plan.md` |
+| `agent_draft` | extended | `01_inbox/agent_inbox/` | `agent_draft.md` |
+| `agent_memory` | extended | `10_agents/memory/candidates/` | none |
+| `tool` | extended | `12_tools/` | `tool.md` |
+| `asset` | extended | `04_areas/*/assets/` | none |
+| `study_session` | extended | `02_journal/daily/` | `study_session.md` |
+| `practice_log` | extended | `02_journal/daily/` | `practice_log.md` |
+| `error_log` | extended | `02_journal/reflections/` | `error_log.md` |
+| `archive` | extended | `04_areas/*/archive/` | none |
 
 ## Date Rules
 
-- `created`, `updated`, and `review_after` use `YYYY-MM-DD` when populated.
+- `created` and `updated` should use full ISO 8601 timestamps with timezone for new area and inbox notes, for example `2026-06-09T14:30:12+03:00`.
+- Existing system docs and reusable templates may use empty values or date-only `YYYY-MM-DD` values.
+- `review_after` stays date-only `YYYY-MM-DD`.
 - Card-level `due::` also uses `YYYY-MM-DD`.
 - Empty date fields are allowed in reusable templates.
+
+## Filename Rules
+
+Area-local content and Markdown inbox captures use filesystem-safe local Europe/Bucharest datetime prefixes:
+
+```text
+YYYY-MM-DDTHHMMSS+HHMM_2-to-4-word-slug.md
+```
+
+Curated area-local assets use the same stem convention, for example:
+
+```text
+2026-06-09T143012+0300_nmap-scan-output.png
+```
+
+`README.md`, system docs, templates, journal notes, and agent/tool docs are exempt.
 
 ## Memory Card Convention
 
