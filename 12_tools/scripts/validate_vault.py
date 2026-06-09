@@ -41,9 +41,32 @@ class SchemaRow:
     default_template: str
 
 
+@dataclass(frozen=True)
+class ValidationResult:
+    errors: list[str]
+    warnings: list[str]
+
+
 TIMESTAMPED_NAME_PATTERN = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{6}[+-]\d{4}_[a-z0-9]+(?:-[a-z0-9]+){1,3}$"
 )
+
+PRIVATE_FOLDERS = (".creds", ".no-commit")
+REQUIRED_GITIGNORE_PATTERNS = {
+    ".creds/": ".creds/.vault-validation-probe",
+    ".no-commit/": ".no-commit/.vault-validation-probe",
+    ".env": ".env",
+    ".env.*": ".env.local",
+}
+
+
+def reset_context(root: str | Path) -> None:
+    global ROOT, ERRORS, WARNINGS, SCAN_FILES_CACHE, SCAN_PATHS_CACHE
+    ROOT = Path(root).resolve()
+    ERRORS = []
+    WARNINGS = []
+    SCAN_FILES_CACHE = None
+    SCAN_PATHS_CACHE = None
 
 
 def rel(path: Path) -> str:
@@ -470,6 +493,30 @@ def check_gitignore() -> None:
         error(".gitignore is missing")
         return
 
+    gitignore_lines = read_text(gitignore).splitlines()
+    normalized_patterns: set[str] = set()
+    for line_number, line in enumerate(gitignore_lines, start=1):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.startswith("!") and not stripped.startswith("\\!"):
+            pattern = stripped[1:].lstrip("/")
+            if any(pattern == folder or pattern.startswith(f"{folder}/") for folder in PRIVATE_FOLDERS):
+                error(f".gitignore:{line_number}: private folder unignore pattern is forbidden")
+            continue
+        normalized_patterns.add(stripped.lstrip("/"))
+
+    for required_pattern, probe_path in REQUIRED_GITIGNORE_PATTERNS.items():
+        if required_pattern not in normalized_patterns:
+            error(f".gitignore: missing required ignore pattern '{required_pattern}'")
+        result = subprocess.run(
+            ["git", "check-ignore", "-q", probe_path],
+            cwd=ROOT,
+            check=False,
+        )
+        if result.returncode == 1:
+            error(f"{probe_path}: must be ignored by .gitignore")
+
     broad_patterns = {
         ".agents/",
         ".agents/**",
@@ -478,7 +525,7 @@ def check_gitignore() -> None:
         ".codex/",
         ".codex/**",
     }
-    for line_number, line in enumerate(read_text(gitignore).splitlines(), start=1):
+    for line_number, line in enumerate(gitignore_lines, start=1):
         stripped = line.strip()
         if stripped in broad_patterns:
             error(f".gitignore:{line_number}: broad agent ignore pattern hides committed docs or skills")
@@ -495,6 +542,15 @@ def check_gitignore() -> None:
         )
         if result.returncode == 0:
             error(f"{skill_path}: must not be ignored by .gitignore")
+
+
+def check_private_folder_tracking() -> None:
+    tracked = git_ls_files("--cached")
+    if tracked is None:
+        return
+    for relative in sorted(tracked):
+        if any(relative == folder or relative.startswith(f"{folder}/") for folder in PRIVATE_FOLDERS):
+            error(f"{relative}: private folder content must not be tracked")
 
 
 def check_script_structure() -> None:
@@ -539,6 +595,12 @@ def check_json_files() -> None:
 
 def path_matches_default_folder(path: Path, default_folder: str) -> bool:
     return path_matches_route(rel(path), default_folder)
+
+
+def default_folders_for_type(row: SchemaRow) -> list[str]:
+    if row.note_type == "inbox":
+        return [row.default_folder, "04_areas/*/inbox/"]
+    return [row.default_folder]
 
 
 def check_markdown_schema(schema_rows: dict[str, SchemaRow]) -> None:
@@ -602,10 +664,12 @@ def check_markdown_schema(schema_rows: dict[str, SchemaRow]) -> None:
         else:
             if not rel(path).startswith("11_templates/") and not default_folder_exempt(path):
                 row = schema_rows[note_type]
-                if not path_matches_default_folder(path, row.default_folder):
+                allowed_folders = default_folders_for_type(row)
+                if not any(path_matches_default_folder(path, folder) for folder in allowed_folders):
+                    folder_list = " or ".join(f"'{folder}'" for folder in allowed_folders)
                     error(
                         f"{rel(path)}: type '{note_type}' belongs under "
-                        f"'{row.default_folder}'"
+                        f"{folder_list}"
                     )
         if status not in statuses:
             error(f"{rel(path)}: status '{status}' is not allowed")
@@ -909,29 +973,43 @@ def check_markdown_style_basics() -> None:
                 error(f"{rel(path)}:{line_number}: trailing whitespace")
 
 
-paths = all_paths()
-schema_rows = parse_schema()
+def run_checks(root: str | Path) -> ValidationResult:
+    reset_context(root)
+    paths = all_paths()
+    schema_rows = parse_schema()
 
-check_paths(paths)
-check_gitignore()
-check_script_structure()
-check_json_files()
-check_markdown_schema(schema_rows)
-check_wikilinks()
-check_memory_metadata()
-check_filename_conventions()
-check_secrets_and_local_paths()
-check_large_files()
-check_skills()
-check_markdown_style_basics()
+    check_paths(paths)
+    check_gitignore()
+    check_private_folder_tracking()
+    check_script_structure()
+    check_json_files()
+    check_markdown_schema(schema_rows)
+    check_wikilinks()
+    check_memory_metadata()
+    check_filename_conventions()
+    check_secrets_and_local_paths()
+    check_large_files()
+    check_skills()
+    check_markdown_style_basics()
 
-for warning in WARNINGS:
-    print(f"warning: {warning}", file=sys.stderr)
+    return ValidationResult(errors=list(ERRORS), warnings=list(WARNINGS))
 
-if ERRORS:
-    print("Validation failed:", file=sys.stderr)
-    for item in ERRORS:
-        print(f"- {item}", file=sys.stderr)
-    sys.exit(1)
 
-print("Core vault validation passed.")
+def main() -> int:
+    result = run_checks(Path.cwd())
+
+    for warning in result.warnings:
+        print(f"warning: {warning}", file=sys.stderr)
+
+    if result.errors:
+        print("Validation failed:", file=sys.stderr)
+        for item in result.errors:
+            print(f"- {item}", file=sys.stderr)
+        return 1
+
+    print("Core vault validation passed.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

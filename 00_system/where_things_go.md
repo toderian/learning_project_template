@@ -2,7 +2,7 @@
 type: system
 status: stable
 created: 2026-06-08
-updated: 2026-06-08
+updated: 2026-06-09
 tags: [system, triage]
 ---
 
@@ -13,6 +13,7 @@ Use this routing guide when filing notes or assets.
 ## Quick Routing
 
 - Unknown-topic capture: `01_inbox/`
+- Known-topic capture needing triage: `04_areas/<area>/inbox/`
 - Time-based log, study session, decision, or reflection: `02_journal/`
 - Known learning topic: `04_areas/<area>/`
 - Active outcome with an end condition: `04_areas/<area>/projects/`
@@ -37,7 +38,20 @@ Use this routing guide when filing notes or assets.
 
 ## New Areas
 
-Create a new area manually from the skeleton in [../04_areas/README.md](../04_areas/README.md). Do not create placeholder areas before there is real material to file.
+Create a new area with `12_tools/scripts/create_area.py <area>` once there is
+real material to file. Use a lowercase kebab-case area name, then route new
+area-local notes with `12_tools/scripts/new_note.py TYPE TITLE --area <area>`.
+
+Do not create placeholder areas before there is real material to file.
+
+## New Notes
+
+Use `12_tools/scripts/new_note.py` for timestamped Markdown notes in the
+supported schema routes. Pass `--area <area>` for area-local types such as
+`atomic`, `literature`, `resource`, `project`, `summary`, and `inbox`.
+
+Use global `inbox` only when the topic is unknown. Use area-local `inbox` when
+the topic is known but the final type is not.
 
 ## If Unsure
 

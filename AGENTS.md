@@ -45,6 +45,17 @@ Exception: `10_agents/memory/candidates/` is an approved write scope for bounded
 
 Approved CLI or agent moves must update inbound wikilinks with `12_tools/scripts/rewrite_wikilinks.py` or an equivalent reviewed process. If link rewriting is unsafe, leave files in place and produce a proposal.
 
+## Python Environments
+
+When a Python virtual environment or local dependency install is needed, use `uv`.
+
+Default local setup:
+
+- `uv venv`
+- `uv pip install -r requirements.txt`
+
+Do not create virtual environments with `python -m venv` or install local dependencies with direct `pip` unless `uv` is unavailable and the user approves the fallback.
+
 ## Local Private Folders
 
 `.creds/` is local-only storage for credentials, keys, tokens, and private config that agents may use only for explicit user-requested tasks. Agents must read the minimum needed file, avoid printing secret values, prefer passing secrets through environment variables or standard tool config, and never copy secrets into notes, logs, commits, prompts, or summaries.

@@ -34,3 +34,13 @@ Agent rules:
 - Do not force-add `.no-commit/` to Git.
 
 Both folders are intentionally ignored by `.gitignore`.
+
+Validation expects `.gitignore` to ignore:
+
+- `.creds/`
+- `.no-commit/`
+- `.env`
+- `.env.*`
+
+Do not add unignore rules for these private paths. Validation should fail if
+content under `.creds/` or `.no-commit/` is tracked, even by force-add.

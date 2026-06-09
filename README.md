@@ -9,13 +9,17 @@ The vault works in any Markdown editor. Obsidian is optional and should be treat
 1. Read [00_system/start_here.md](00_system/start_here.md).
 2. Capture unknown-topic notes in `01_inbox/quick_notes/`.
 3. Use [00_system/where_things_go.md](00_system/where_things_go.md) when filing notes.
-4. Use templates from `11_templates/` for repeatable note types.
-5. Install validation dependencies, then run local validation before committing:
+4. Use `12_tools/scripts/create_area.py` and `12_tools/scripts/new_note.py` for new areas and routed notes.
+5. Use templates from `11_templates/` for manual repeatable note types.
+6. Install validation dependencies, then run local checks before committing:
 
 ```bash
 npm ci
-python3 -m pip install -r requirements.txt
+uv venv
+uv pip install -r requirements.txt
+.venv/bin/python -m pytest
 12_tools/scripts/validate.sh
+git diff --check
 ```
 
 Set `SKIP_MARKDOWNLINT=1` only when you intentionally need to run the core validator without Markdown lint.
@@ -37,9 +41,11 @@ This repo is a personal exemplar. Edit the root docs, policies, templates, and f
 
 ## Principles
 
-- Keep file and folder names lowercase or snake_case with no spaces.
+- Keep non-area file and folder names lowercase or snake_case with no spaces.
+- Use lowercase kebab-case for area folder names.
 - Use timestamp-prefixed filenames for Markdown inbox captures and area-local content.
 - Keep unknown-topic material in `01_inbox/`; file known-topic material under `04_areas/<area>/`.
+- Use area-local `inbox` for known-topic captures that still need triage.
 - Keep personal data, credentials, runtime state, databases, and generated caches out of Git.
 - Keep large labs, datasets, Docker/VM work, model experiments, and database projects in separate repositories.
 - Use Git LFS only as an optional layer for large curated assets.

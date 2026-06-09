@@ -33,5 +33,11 @@ jobs:
         run: |
           npm ci
 
+      - name: Test tools
+        run: python -m pytest
+
       - name: Validate vault
         run: 12_tools/scripts/validate.sh
+
+      - name: Check whitespace
+        run: git diff --check
